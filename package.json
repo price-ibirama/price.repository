@@ -4,9 +4,9 @@
   "description": "",
   "main": "dist/app.js",
   "scripts": {
-    "dev": "tsx --watch --env-file=.env src/app.ts",
+    "dev": "tsx --watch --env-file=.env.development src/app.ts",
     "build": "tsup src/app.ts --format esm --clean --minify",
-    "start": "node --env-file=.env dist/app.js"
+    "start": "node --env-file=.env ."
   },
   "repository": {
     "type": "git",
