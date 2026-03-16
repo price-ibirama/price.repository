@@ -40,15 +40,15 @@ const schema = {
 
 export default async function (app: FastifyInstanceWithZod) {
     return app
-        .post('/', { schema }, async (req, rep) => {
+        .post('/', async (req, rep) => {
             const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
-            console.log(`\nWebhook received ${timestamp}\n`);
+            console.info(`\nWebhook received ${timestamp}\n with payload: `, req.body);
 
-            console.log("JSON Payload", req.body)
-
+            // @ts-expect-error teste
             const msg = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
             if (!msg) return rep.status(StatusCodes.OK).send();
 
+            // @ts-expect-error teste
             const appPhoneId = req.body.entry?.[0]?.changes?.[0]?.metadata.phone_number_id
             if ([
                 env.META_WHATSAPP_PHONE_ID_PROD,

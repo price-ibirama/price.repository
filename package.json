@@ -4,6 +4,7 @@
   "description": "",
   "main": "dist/app.js",
   "scripts": {
+    "typecheck": "tsc --noEmit",
     "dev": "tsx --watch --env-file=.env.development src/app.ts",
     "build": "tsup src/app.ts --format esm --clean --minify",
     "start": "node ."
