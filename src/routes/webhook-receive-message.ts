@@ -58,16 +58,17 @@ export default async function (app: FastifyInstanceWithZod) {
 
             const appPhoneId = incomingMessage.value.metadata.phone_number_id
 
-            console.info({
-                env,
+            console.info(JSON.stringify({
                 appPhoneId,
                 incomingMessage
-            })
+            }))
 
-            if ([
-                env.META_WHATSAPP_PHONE_ID_PROD,
-                env.META_WHATSAPP_PHONE_ID_TEST
-            ].includes(appPhoneId)) {
+            if (
+                ![
+                    env.META_WHATSAPP_PHONE_ID_PROD,
+                    env.META_WHATSAPP_PHONE_ID_TEST
+                ].includes(appPhoneId)
+            ) {
                 console.log('App phone number is not valid.')
                 return rep.status(StatusCodes.NOT_ACCEPTABLE).send()
             }
