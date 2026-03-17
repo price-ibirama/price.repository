@@ -50,13 +50,20 @@ export default async function (app: FastifyInstanceWithZod) {
     return app
         .post('/', { schema }, async (req, rep) => {
             const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
-            console.info(`\nWebhook received ${timestamp}\n with payload: `, JSON.stringify(req.body));
+            console.info(`\nWebhook received ${timestamp} with payload: \n`, JSON.stringify(req.body));
 
             const [incomingEntryPayload] = req.body.entry
             const { changes } = incomingEntryPayload
             const [incomingMessage] = changes
 
             const appPhoneId = incomingMessage.value.metadata.phone_number_id
+
+            console.info({
+                env,
+                appPhoneId,
+                incomingMessage
+            })
+
             if ([
                 env.META_WHATSAPP_PHONE_ID_PROD,
                 env.META_WHATSAPP_PHONE_ID_TEST
