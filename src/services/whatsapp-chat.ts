@@ -10,7 +10,18 @@ export class WhatsappChat {
     ) { }
 
     async message({ content }: WhatsappChatMessagePayload) {
-        const url = new URL(`https://graph.facebook.com/v18.0/${this.appPhoneId}/messages`);
+        const url = new URL(`https://graph.facebook.com/v24.0/${this.appPhoneId}/messages`);
+
+        console.info(JSON.stringify({
+            url,
+            token: env.META_WHATSAPP_TOKEN,
+            body: {
+                messaging_product: "whatsapp",
+                to: this.phoneId,
+                type: "text",
+                text: { body: content }
+            }
+        }))
 
         const res = await fetch(url, {
             method: 'POST',
