@@ -9,7 +9,7 @@ export class WhatsappSender {
     ) { }
 
     async message({ content }: WhatsappSenderMessageOptions) {
-        const url = new URL(`https://graph.facebook.com/v${env.META_WHATSAPP_API_VERSION}/${env.META_WHATSAPP_PHONE_ID_TEST}/messages`);
+        const url = new URL(`https://graph.facebook.com/v${env.META_WHATSAPP_API_VERSION}/${env.META_WHATSAPP_SENDER_PHONE_ID}/messages`);
 
         const res = await fetch(url, {
             method: 'POST',
