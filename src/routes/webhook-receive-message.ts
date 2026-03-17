@@ -57,25 +57,15 @@ export default async function (app: FastifyInstanceWithZod) {
 
             const [message] = incomingChange.value.messages
 
-            const senderPhoneIdReceived = incomingChange.value.metadata.phone_number_id
+            const phoneIdReceived = incomingChange.value.metadata.phone_number_id
 
             console.info({
-                senderPhoneIdReceived,
+                phoneIdReceived,
                 message
             })
 
-            if (
-                ![
-                    env.META_WHATSAPP_PHONE_ID_PROD,
-                    env.META_WHATSAPP_PHONE_ID_TEST
-                ].includes(senderPhoneIdReceived)
-            ) {
-                console.log('O Sender Phone ID recebido não é um Phone ID de Teste ou Produção.')
-                return rep.status(StatusCodes.NOT_ACCEPTABLE).send()
-            }
-
-            if (senderPhoneIdReceived !== env.META_WHATSAPP_SENDER_PHONE_ID) {
-                console.log('O Sender Phone ID recebido é diferente do configurado para a aplicação.')
+            if (phoneIdReceived !== env.META_WHATSAPP_PHONE_ID) {
+                console.log('O Phone ID recebido é diferente do configurado para a aplicação.')
                 return rep.status(StatusCodes.NOT_ACCEPTABLE).send()
             }
 

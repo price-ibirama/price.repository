@@ -7,9 +7,7 @@ export const envSchema = z4.object({
     META_WEBHOOK_VERIFY_TOKEN: z4.string(),
 
     META_WHATSAPP_ACCESS_TOKEN: z4.string(),
-    META_WHATSAPP_PHONE_ID_PROD: z4.string(),
-    META_WHATSAPP_PHONE_ID_TEST: z4.string(),
-    META_WHATSAPP_SENDER_PHONE_ID: z4.string().nonempty("É necessário configurar um sender phone id."),
+    META_WHATSAPP_PHONE_ID: z4.string().nonempty("É necessário configurar um phone id."),
     META_WHATSAPP_API_VERSION: z4.coerce.number().transform(v => v.toPrecision(3)),
 
     SUPABASE_URL: z4.url(),
