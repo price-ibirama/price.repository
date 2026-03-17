@@ -1,6 +1,6 @@
 import { env } from "@/config/env";
 import { supabase } from "@/services/supabase";
-import { WhatsappChat } from "@/services/whatsapp-chat";
+import { WhatsappSender } from "@/services/whatsapp-sender";
 import { parseTemplate } from "@/utils/parse-template";
 import type { FastifyInstanceWithZod, FastifySchema } from "fastify";
 import { StatusCodes } from "http-status-codes";
@@ -8,10 +8,10 @@ import z4 from "zod/v4";
 
 const whatsappWebhookPayloadSchema = z4.object({
     object: z4.enum(['whatsapp_business_account']),
-    entry: z4.array(
+    entry: z4.tuple([
         z4.object({
             id: z4.string(),
-            changes: z4.array(
+            changes: z4.tuple([
                 z4.object({
                     value: z4.object({
                         messaging_product: z4.literal("whatsapp"),
@@ -23,23 +23,23 @@ const whatsappWebhookPayloadSchema = z4.object({
                             profile: z4.object({ name: z4.string() }),
                             wa_id: z4.string()
                         })),
-                        messages: z4.array(
+                        messages: z4.tuple([
                             z4.object({
                                 from: z4.string(),
                                 text: z4.object({
                                     body: z4.string()
-                                }).optional(),
-                                id: z4.string().optional(),
-                                timestamp: z4.string().optional(),
+                                }),
+                                id: z4.string(),
+                                timestamp: z4.string(),
                                 type: z4.enum(["text"])
                             })
-                        )
+                        ])
                     }),
                     field: z4.literal("messages")
                 })
-            )
+            ])
         })
-    )
+    ])
 });
 
 const schema = {
@@ -50,39 +50,42 @@ export default async function (app: FastifyInstanceWithZod) {
     return app
         .post('/', { schema }, async (req, rep) => {
             const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
-            console.info(`\nWebhook received ${timestamp} with payload: \n`, JSON.stringify(req.body));
+            console.info(`\nWebhook received ${timestamp} with payload: \n`, JSON.stringify(req.body, null, 4));
 
-            const [incomingEntryPayload] = req.body.entry
-            const { changes } = incomingEntryPayload
-            const [incomingMessage] = changes
+            const [incomingEntry] = req.body.entry
+            const [incomingChange] = incomingEntry.changes
 
-            const appPhoneId = incomingMessage.value.metadata.phone_number_id
+            const [message] = incomingChange.value.messages
 
-            console.info(JSON.stringify({
-                appPhoneId,
-                incomingMessage
-            }))
+            const receivedPhoneId = incomingChange.value.metadata.phone_number_id
+
+            console.info({
+                receivedPhoneId,
+                message
+            })
 
             if (
                 ![
                     env.META_WHATSAPP_PHONE_ID_PROD,
                     env.META_WHATSAPP_PHONE_ID_TEST
-                ].includes(appPhoneId)
+                ].includes(receivedPhoneId)
             ) {
-                console.log('App phone number is not valid.')
+                console.log('Received phone id is not valid.')
                 return rep.status(StatusCodes.NOT_ACCEPTABLE).send()
             }
 
-            const from = incomingMessage.value.messages.at(0)?.from ?? "";
-            const text = String(incomingMessage.value.messages.at(0)?.text?.body ?? "").trim().toLowerCase()
+            const {
+                from: recipientPhone,
+                type: messageType,
+                text: messageContent
+            } = message
 
-            console.info("FROM:", from);
-            console.info("TEXT:", text);
+            const plainTextMessage = messageType === 'text' ? messageContent.body : ""
 
-            const chat = new WhatsappChat(appPhoneId, from)
+            const sender = new WhatsappSender(recipientPhone)
 
             const answerChat = async (message: string) => {
-                await chat.message({
+                await sender.message({
                     content: message
                 });
                 return rep.status(StatusCodes.OK).send()
@@ -90,13 +93,13 @@ export default async function (app: FastifyInstanceWithZod) {
 
             try {
                 // 🔹 Ignorar mensagens muito curtas
-                if (text.length < 3) {
+                if (plainTextMessage.length < 3) {
                     return answerChat("Digite o nome de um produto para consultar preços 🙂")
                 }
 
                 const greetings = ["oi", "oii", "olá", "ola", "bom dia", "boa tarde", "boa noite"];
 
-                if (greetings.includes(text)) {
+                if (greetings.includes(plainTextMessage)) {
                     return answerChat(
                         [
                             "Olá! 👋",
@@ -111,11 +114,11 @@ export default async function (app: FastifyInstanceWithZod) {
                 } = await supabase
                     .from('produtos')
                     .select('id')
-                    .ilike('nome', `%${text}%`)
+                    .ilike('nome', `%${plainTextMessage}%`)
                     .limit(1);
 
                 if (fetchProductsError || !products || products.length === 0) {
-                    return answerChat(`Produto "${text}" não encontrado.`)
+                    return answerChat(`Produto "${plainTextMessage}" não encontrado.`)
                 }
 
                 const [firstProductFounded] = products
@@ -149,7 +152,7 @@ export default async function (app: FastifyInstanceWithZod) {
                 }
 
                 if (metadataForFirstProduct.length === 0) {
-                    return answerChat(`Não encontrei preços para *${text}*`)
+                    return answerChat(`Não encontrei preços para *${plainTextMessage}*`)
                 }
 
                 const validPrices = metadataForFirstProduct.filter(p => {
@@ -158,7 +161,7 @@ export default async function (app: FastifyInstanceWithZod) {
                 });
 
                 if (validPrices.length === 0) {
-                    return answerChat(`Não encontrei preços válidos para *${text}*`)
+                    return answerChat(`Não encontrei preços válidos para *${plainTextMessage}*`)
                 }
 
                 validPrices.sort((a, b) => {
@@ -194,7 +197,7 @@ export default async function (app: FastifyInstanceWithZod) {
                 }
 
                 const message = parseTemplate(messageTemplate.join("\n"), {
-                    BEST_PRODUCT_NAME: bestProductPrice.produtos.at(0)?.nome || text,
+                    BEST_PRODUCT_NAME: bestProductPrice.produtos.at(0)?.nome || plainTextMessage,
                     STORE_NAME: bestProductPrice.mercados.at(0)?.nome,
                     STORE_LOCALIZATION: `${bestProductPrice.mercados.at(0)?.bairro} - ${bestProductPrice.mercados.at(0)?.cidade}`,
                     BEST_PRODUCT_PRICE: bestPrice,
