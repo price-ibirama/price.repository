@@ -2,7 +2,7 @@ import z4 from "zod/v4";
 
 export const envSchema = z4.object({
     PORT: z4.coerce.number().default(3000),
-    NODE_ENV: z4.enum(["development", "production"]),
+    NODE_ENV: z4.enum(["development", "production", "staging"]),
 
     META_WEBHOOK_VERIFY_TOKEN: z4.string(),
 
