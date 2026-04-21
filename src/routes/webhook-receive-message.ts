@@ -3,7 +3,7 @@ import type { FastifyInstanceWithZod, FastifySchema } from "fastify";
 import { StatusCodes } from "http-status-codes";
 import z4 from "zod/v4";
 
-const messageSchema = z4.object({
+const messageSchema = z4.looseObject({
     from: z4.string(),
     id: z4.string(),
     timestamp: z4.string(),
@@ -11,40 +11,40 @@ const messageSchema = z4.object({
     text: z4.object({
         body: z4.string(),
     }).optional(),
-}).passthrough();
+});
 
-const statusSchema = z4.object({
+const statusSchema = z4.looseObject({
     id: z4.string(),
     status: z4.string(),
     recipient_id: z4.string().optional(),
-}).passthrough();
+});
 
 const whatsappWebhookPayloadSchema = z4.object({
     object: z4.literal("whatsapp_business_account"),
     entry: z4.array(
-        z4.object({
+        z4.looseObject({
             id: z4.string(),
             changes: z4.array(
-                z4.object({
+                z4.looseObject({
                     field: z4.string(),
-                    value: z4.object({
+                    value: z4.looseObject({
                         messaging_product: z4.literal("whatsapp").optional(),
                         metadata: z4.object({
                             display_phone_number: z4.string().optional(),
                             phone_number_id: z4.string(),
                         }),
                         contacts: z4.array(
-                            z4.object({
+                            z4.looseObject({
                                 profile: z4.object({ name: z4.string() }).optional(),
                                 wa_id: z4.string(),
-                            }).passthrough()
+                            })
                         ).optional(),
                         messages: z4.array(messageSchema).optional(),
                         statuses: z4.array(statusSchema).optional(),
-                    }).passthrough(),
-                }).passthrough()
+                    }),
+                })
             ),
-        }).passthrough()
+        })
     ),
 });
 

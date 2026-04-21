@@ -1,5 +1,6 @@
 import { env } from "@/config/env";
 import type { ChannelContext } from "@/services/channel-context";
+import { renderWhatsappPreview } from "@/utils/render-whatsapp-preview";
 
 type SendTextMessageOptions = {
     to: string;
@@ -40,6 +41,17 @@ export class WhatsappClient {
     private async dispatch(body: Record<string, unknown>, action: string) {
         if (this.context.deliveryMode === "mock") {
             console.info(`[mock:${this.context.channel}] ${action}`, JSON.stringify(body, null, 2));
+
+            if (action === "sendText") {
+                const content = typeof body.text === "object" && body.text && "body" in body.text
+                    ? body.text.body
+                    : "";
+
+                if (typeof content === "string") {
+                    console.info(renderWhatsappPreview(content));
+                }
+            }
+
             return;
         }
 

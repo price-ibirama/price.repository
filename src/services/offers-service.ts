@@ -5,6 +5,7 @@ export type OfferResult = {
     produto: string;
     preco: number;
     estabelecimento: string;
+    tipo_estabelecimento?: string | null;
     bairro: string | null;
     logradouro: string | null;
     cidade: string;
@@ -40,35 +41,61 @@ function formatCurrency(value: number) {
 }
 
 function formatDate(value: string) {
-    return new Intl.DateTimeFormat("pt-BR").format(new Date(`${value}T00:00:00`));
+    return new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+    }).format(new Date(`${value}T00:00:00`));
+}
+
+function getStoreTypeEmoji(storeType?: string | null) {
+    if (storeType === "farmacia") {
+        return "💊";
+    }
+
+    if (storeType === "posto_combustivel") {
+        return "⛽";
+    }
+
+    return "🛒";
+}
+
+function getPositionEmoji(index: number) {
+    const positions = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
+    return positions[index] ?? `${index + 1}.`;
 }
 
 export function buildOffersResponse(searchTerm: string, offers: OfferResult[]) {
     if (offers.length === 0) {
-        return `Nao encontrei ofertas para \"${searchTerm}\".`;
+        return `🔎 Nao encontrei ofertas para \"${searchTerm}\".`;
     }
 
-    const lines = [`Melhores ofertas para *${offers[0].produto}*:`];
+    const uniqueCities = [...new Set(offers.map((offer) => offer.cidade).filter(Boolean))];
+    const locationSuffix = uniqueCities.length === 1 ? ` em ${uniqueCities[0]}` : "";
+    const resultLabel = offers.length === 1 ? "oferta" : "ofertas";
+
+    const lines = [`🔎 Encontrei ${offers.length} ${resultLabel} para \"${searchTerm}\"${locationSuffix}:`];
 
     offers.forEach((offer, index) => {
-        const location = [offer.bairro, offer.cidade].filter(Boolean).join(" - ");
+        const position = getPositionEmoji(index);
+        const storeEmoji = getStoreTypeEmoji(offer.tipo_estabelecimento);
+        const location = offer.bairro ? `${offer.bairro}` : offer.cidade;
 
         lines.push(
             "",
-            `${index + 1}. ${formatCurrency(offer.preco)} - ${offer.estabelecimento}`,
-            location || offer.cidade,
+            `${position} ${offer.produto} - ${formatCurrency(offer.preco)}`,
+            `${storeEmoji} ${offer.estabelecimento}${location ? ` (${location})` : ""}`,
         );
 
         if (offer.logradouro) {
-            lines.push(offer.logradouro);
-        }
-
-        if (offer.validade_fim) {
-            lines.push(`Validade: ${formatDate(offer.validade_fim)}`);
+            lines.push(`📍 ${offer.logradouro}`);
         }
 
         if (offer.observacao) {
-            lines.push(`Obs: ${offer.observacao}`);
+            lines.push(`💡 ${offer.observacao}`);
+        }
+
+        if (offer.validade_fim) {
+            lines.push(`📅 Valido ate: ${formatDate(offer.validade_fim)}`);
         }
     });
 

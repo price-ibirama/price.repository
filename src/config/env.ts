@@ -18,7 +18,7 @@ export const envSchema = z4.object({
     PORT: z4.coerce.number().default(3000),
 
     META_WEBHOOK_VERIFY_TOKEN: z4.string().default("dev-whatsapp-verify-token"),
-    META_WHATSAPP_API_VERSION: z4.string().default("21.0"),
+    META_WHATSAPP_API_VERSION: z4.string().default("25.0"),
 
     WHATSAPP_OFFICIAL_PHONE_NUMBER_ID: optionalString,
     WHATSAPP_OFFICIAL_ACCESS_TOKEN: optionalString,
@@ -33,7 +33,7 @@ export const envSchema = z4.object({
     LOCAL_SUPABASE_URL: optionalUrl,
     LOCAL_SUPABASE_SERVICE_ROLE_KEY: optionalString,
     LOCAL_MOCK_PHONE_NUMBER_ID: z4.string().default("local-dev-phone-number-id"),
-    LOCAL_MOCK_RECIPIENT_PHONE: z4.string().default("5511999999999"),
+    MOCK_USER_PHONE: z4.string().default("5511999999999"),
 });
 
 export const env = envSchema.parse(process.env);

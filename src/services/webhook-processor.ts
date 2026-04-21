@@ -1,5 +1,6 @@
 import { buildOffersResponse, searchOffers } from "@/services/offers-service";
 import { classifyMessage, normalizeMessage } from "@/services/message-classifier";
+import { wrapBetaMessage } from "@/services/message-template";
 import { registerIntentLog, registerResponseLog } from "@/services/logging-service";
 import { resolveIncomingChannelContext, type ChannelContext } from "@/services/channel-context";
 import { WhatsappClient } from "@/services/whatsapp-client";
@@ -26,15 +27,15 @@ export async function processIncomingWhatsappMessage({ phoneNumberId, message, c
     const normalizedMessage = message.type === "text" ? normalizeMessage(rawText) : "";
     const classification = message.type === "text" ? classifyMessage(normalizedMessage) : "desconhecido";
 
-    let responseMessage = "Envie o nome de um produto para buscar ofertas.";
+    let responseMessage = wrapBetaMessage("Envie o nome de um produto para buscar ofertas.");
     let totalResults = 0;
     let results: unknown[] = [];
     const identifiedTerm = classification === "busca" ? normalizedMessage : null;
 
     if (message.type !== "text") {
-        responseMessage = "Formato invalido. Envie apenas mensagens de texto com o nome do produto.";
+        responseMessage = wrapBetaMessage("Formato invalido. Envie apenas mensagens de texto com o nome do produto.");
     } else if (classification === "saudacao") {
-        responseMessage = "Ola! Envie o nome de um produto e eu busco as melhores ofertas para voce.";
+        responseMessage = wrapBetaMessage("Ola! Envie o nome de um produto e eu busco as melhores ofertas para voce.");
     } else if (classification === "busca") {
         try {
             const offers = await searchOffers(resolvedContext, normalizedMessage);
@@ -43,14 +44,15 @@ export async function processIncomingWhatsappMessage({ phoneNumberId, message, c
                 produto: offer.produto,
                 preco: offer.preco,
                 estabelecimento: offer.estabelecimento,
+                tipo_estabelecimento: offer.tipo_estabelecimento,
                 bairro: offer.bairro,
                 cidade: offer.cidade,
                 validade_fim: offer.validade_fim,
             }));
-            responseMessage = buildOffersResponse(rawText, offers);
+            responseMessage = wrapBetaMessage(buildOffersResponse(rawText, offers));
         } catch (error) {
             console.error(error);
-            responseMessage = "Nao consegui consultar as ofertas agora. Tente novamente em instantes.";
+            responseMessage = wrapBetaMessage("Nao consegui consultar as ofertas agora. Tente novamente em instantes.");
         }
     }
 

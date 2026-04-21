@@ -20,45 +20,27 @@ function assertString(value: string | undefined, label: string): string {
     return value;
 }
 
-function buildOfficialContext(): ChannelContext | null {
-    if (!env.WHATSAPP_OFFICIAL_PHONE_NUMBER_ID) {
-        return null;
-    }
-
-    return {
-        channel: "official",
-        phoneNumberId: env.WHATSAPP_OFFICIAL_PHONE_NUMBER_ID,
-        whatsappAccessToken: assertString(env.WHATSAPP_OFFICIAL_ACCESS_TOKEN, "WHATSAPP_OFFICIAL_ACCESS_TOKEN"),
-        supabaseUrl: assertString(env.OFFICIAL_SUPABASE_URL, "OFFICIAL_SUPABASE_URL"),
-        supabaseServiceRoleKey: assertString(env.OFFICIAL_SUPABASE_SERVICE_ROLE_KEY, "OFFICIAL_SUPABASE_SERVICE_ROLE_KEY"),
-        deliveryMode: "real",
-    };
-}
-
-function buildTestContext(): ChannelContext | null {
-    if (!env.WHATSAPP_TEST_PHONE_NUMBER_ID) {
-        return null;
-    }
-
-    return {
-        channel: "test",
-        phoneNumberId: env.WHATSAPP_TEST_PHONE_NUMBER_ID,
-        whatsappAccessToken: assertString(env.WHATSAPP_TEST_ACCESS_TOKEN, "WHATSAPP_TEST_ACCESS_TOKEN"),
-        supabaseUrl: assertString(env.TEST_SUPABASE_URL, "TEST_SUPABASE_URL"),
-        supabaseServiceRoleKey: assertString(env.TEST_SUPABASE_SERVICE_ROLE_KEY, "TEST_SUPABASE_SERVICE_ROLE_KEY"),
-        deliveryMode: "real",
-    };
-}
-
 export function resolveIncomingChannelContext(phoneNumberId: string): ChannelContext | null {
-    const officialContext = buildOfficialContext();
-    if (officialContext && officialContext.phoneNumberId === phoneNumberId) {
-        return officialContext;
+    if (env.WHATSAPP_OFFICIAL_PHONE_NUMBER_ID === phoneNumberId) {
+        return {
+            channel: "official",
+            phoneNumberId,
+            whatsappAccessToken: assertString(env.WHATSAPP_OFFICIAL_ACCESS_TOKEN, "WHATSAPP_OFFICIAL_ACCESS_TOKEN"),
+            supabaseUrl: assertString(env.OFFICIAL_SUPABASE_URL, "OFFICIAL_SUPABASE_URL"),
+            supabaseServiceRoleKey: assertString(env.OFFICIAL_SUPABASE_SERVICE_ROLE_KEY, "OFFICIAL_SUPABASE_SERVICE_ROLE_KEY"),
+            deliveryMode: "real",
+        };
     }
 
-    const testContext = buildTestContext();
-    if (testContext && testContext.phoneNumberId === phoneNumberId) {
-        return testContext;
+    if (env.WHATSAPP_TEST_PHONE_NUMBER_ID === phoneNumberId) {
+        return {
+            channel: "test",
+            phoneNumberId,
+            whatsappAccessToken: assertString(env.WHATSAPP_TEST_ACCESS_TOKEN, "WHATSAPP_TEST_ACCESS_TOKEN"),
+            supabaseUrl: assertString(env.TEST_SUPABASE_URL, "TEST_SUPABASE_URL"),
+            supabaseServiceRoleKey: assertString(env.TEST_SUPABASE_SERVICE_ROLE_KEY, "TEST_SUPABASE_SERVICE_ROLE_KEY"),
+            deliveryMode: "real",
+        };
     }
 
     return null;
