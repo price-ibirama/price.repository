@@ -47,9 +47,23 @@ export async function processIncomingWhatsappMessage({ phoneNumberId, message, c
     let results: unknown[] = [];
 
     if (message.type !== "text") {
-        responseMessage = wrapBetaMessage("Formato invalido. Envie apenas mensagens de texto com o nome do produto.");
+        responseMessage = wrapBetaMessage(
+            "Formato invalido. Envie apenas mensagens de texto com o nome do produto.",
+            "",
+            "Exemplo: ",
+            "> cerveja",
+            "> churrasco",
+            "> arroz",
+        );
     } else if (finalClassification === "saudacao") {
-        responseMessage = wrapBetaMessage("Olá! Envie o nome de um produto e eu busco as melhores ofertas para você.");
+        responseMessage = wrapBetaMessage(
+            "Olá! Envie o nome de um produto e eu busco as melhores ofertas para você.",
+            "",
+            "Exemplo: ",
+            "> cerveja",
+            "> churrasco",
+            "> arroz",
+        );
     } else if (finalClassification === "busca") {
         try {
             const searchTerm = identifiedTerm ?? normalizedMessage;

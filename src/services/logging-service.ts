@@ -17,7 +17,7 @@ type RegisterResponseInput = {
     context: ChannelContext;
     intentId: string;
     totalResults: number;
-    results: unknown[];
+    results: Record<string, any>;
 };
 
 export async function registerIntentLog(input: RegisterIntentInput) {
@@ -33,7 +33,7 @@ export async function registerIntentLog(input: RegisterIntentInput) {
         p_mensagem_normalizada: input.normalizedMessage,
         p_mensagem_recebida: input.receivedMessage,
         p_telefone_usuario: input.userPhone,
-        p_termo_identificado: input.identifiedTerm,
+        p_termo_identificado: input.identifiedTerm ?? "",
     });
 
     if (error) {

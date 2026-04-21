@@ -7,7 +7,8 @@
     "typecheck": "tsc --noEmit",
     "dev": "tsx --watch --env-file=.env src/server.ts",
     "dev:local": "tsx --env-file=.env src/dev/local-chat.ts",
-    "db:reset:local": "supabase db reset --local",
+    "supabase:db:reset": "supabase --workdir=src db reset --local",
+    "supabase:generate:types": "supabase --workdir=src gen types --local > src/supabase/database.types.ts",
     "build": "tsup src/server.ts --format esm --clean --minify",
     "start": "node ."
   },

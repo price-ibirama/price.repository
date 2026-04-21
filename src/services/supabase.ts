@@ -1,3 +1,4 @@
+import type { Database } from "@/supabase/database.types";
 import { createClient } from "@supabase/supabase-js";
 
 type SupabaseCredentials = {
@@ -6,7 +7,7 @@ type SupabaseCredentials = {
 };
 
 export function createSupabaseClient({ url, serviceRoleKey }: SupabaseCredentials) {
-    return createClient(url, serviceRoleKey, {
+    return createClient<Database>(url, serviceRoleKey, {
         auth: {
             autoRefreshToken: false,
             persistSession: false,
