@@ -1,5 +1,5 @@
 import { buildOffersResponse, searchOffers } from "@/services/offers-service";
-import { classifyMessage, normalizeMessage } from "@/services/message-classifier";
+import { parseMessageIntent } from "@/services/message-classifier";
 import { wrapBetaMessage } from "@/services/message-template";
 import { registerIntentLog, registerResponseLog } from "@/services/logging-service";
 import { resolveIncomingChannelContext, type ChannelContext } from "@/services/channel-context";
@@ -24,21 +24,36 @@ export async function processIncomingWhatsappMessage({ phoneNumberId, message, c
     await whatsappClient.sendTypingIndicator(message.id);
 
     const rawText = message.type === "text" ? message.text?.body ?? "" : `Mensagem do tipo ${message.type}`;
-    const normalizedMessage = message.type === "text" ? normalizeMessage(rawText) : "";
-    const classification = message.type === "text" ? classifyMessage(normalizedMessage) : "desconhecido";
+    const parsedIntent = message.type === "text"
+        ? parseMessageIntent(rawText)
+        : {
+            normalizedMessage: "",
+            extractedSearchTerm: null,
+            classification: "desconhecido" as const,
+        };
+    const { normalizedMessage, extractedSearchTerm, classification } = parsedIntent;
+    const finalClassification = classification;
+    const identifiedTerm = finalClassification === "busca" ? extractedSearchTerm : null;
 
-    let responseMessage = wrapBetaMessage("Envie o nome de um produto para buscar ofertas.");
+    let responseMessage = wrapBetaMessage(
+        "Envie o nome de um produto para buscar ofertas.",
+        "",
+        "Exemplo: ",
+        "> cerveja",
+        "> churrasco",
+        "> arroz",
+    );
     let totalResults = 0;
     let results: unknown[] = [];
-    const identifiedTerm = classification === "busca" ? normalizedMessage : null;
 
     if (message.type !== "text") {
         responseMessage = wrapBetaMessage("Formato invalido. Envie apenas mensagens de texto com o nome do produto.");
-    } else if (classification === "saudacao") {
-        responseMessage = wrapBetaMessage("Ola! Envie o nome de um produto e eu busco as melhores ofertas para voce.");
-    } else if (classification === "busca") {
+    } else if (finalClassification === "saudacao") {
+        responseMessage = wrapBetaMessage("Olá! Envie o nome de um produto e eu busco as melhores ofertas para você.");
+    } else if (finalClassification === "busca") {
         try {
-            const offers = await searchOffers(resolvedContext, normalizedMessage);
+            const searchTerm = identifiedTerm ?? normalizedMessage;
+            const offers = await searchOffers(resolvedContext, searchTerm);
             totalResults = offers.length;
             results = offers.map((offer) => ({
                 produto: offer.produto,
@@ -49,16 +64,21 @@ export async function processIncomingWhatsappMessage({ phoneNumberId, message, c
                 cidade: offer.cidade,
                 validade_fim: offer.validade_fim,
             }));
-            responseMessage = wrapBetaMessage(buildOffersResponse(rawText, offers));
+            responseMessage = wrapBetaMessage(buildOffersResponse(identifiedTerm ?? searchTerm, offers));
         } catch (error) {
             console.error(error);
             responseMessage = wrapBetaMessage("Nao consegui consultar as ofertas agora. Tente novamente em instantes.");
         }
+    } else {
+        responseMessage = wrapBetaMessage(
+            "Nao consegui identificar um produto na sua mensagem.",
+            "Envie apenas o nome do produto ou uma busca como preco da cerveja."
+        );
     }
 
     const intentId = await registerIntentLog({
         context: resolvedContext,
-        classification,
+        classification: finalClassification,
         whatsappMessageId: message.id,
         recipientPhoneNumberId: phoneNumberId,
         normalizedMessage,

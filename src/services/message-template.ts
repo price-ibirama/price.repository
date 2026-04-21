@@ -1,10 +1,10 @@
-export function wrapBetaMessage(content: string) {
+export function wrapBetaMessage(...content: string[]) {
     const year = new Date().getFullYear();
 
     return [
         "_[Ferramenta em fase BETA]_",
         "",
-        content,
+        ...content,
         "",
         `_${"~ Price, " + year}_`,
     ].join("\n");
