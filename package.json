@@ -2,11 +2,15 @@
   "name": "price.repository",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/app.js",
+  "main": "dist/server.js",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "dev": "tsx --watch --env-file=.env src/app.ts",
-    "build": "tsup src/app.ts --format esm --clean --minify",
+    "dev": "tsx --env-file=.env src/dev/local-chat.ts",
+    "supabase:start": "supabase --workdir=src start",
+    "supabase:stop": "supabase --workdir=src stop",
+    "supabase:db:reset": "supabase --workdir=src db reset --local",
+    "supabase:generate:types": "supabase --workdir=src gen types --local > src/supabase/database.types.ts",
+    "build": "tsup src/server.ts --format esm --clean --minify",
     "start": "node ."
   },
   "repository": {
@@ -23,11 +27,13 @@
   "homepage": "https://github.com/rafhael-galvao/price.repository#readme",
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "supabase": "^2.93.0",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@clack/prompts": "^0.11.0",
     "@supabase/supabase-js": "^2.99.0",
     "fastify": "^5.8.2",
     "fastify-type-provider-zod": "^6.1.0",
