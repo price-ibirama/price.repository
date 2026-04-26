@@ -2,24 +2,13 @@ import { buildOffersResponse, searchOffers } from "@/services/offers-service";
 import { parseMessageIntent } from "@/services/message-classifier";
 import { wrapBetaMessage } from "@/services/message-template";
 import { registerIntentLog, registerResponseLog } from "@/services/logging-service";
-import { resolveIncomingChannelContext, type ChannelContext } from "@/services/channel-context";
 import { WhatsappClient } from "@/services/whatsapp-client";
 import type { IncomingWhatsappStatus, IncomingWhatsappTextMessage } from "@/services/webhook-types";
+import { env } from "@/config/env";
 
-type ProcessMessageInput = {
-    phoneNumberId: string;
-    message: IncomingWhatsappTextMessage;
-    context?: ChannelContext;
-};
+export async function processIncomingWhatsappMessage(message: IncomingWhatsappTextMessage) {
 
-export async function processIncomingWhatsappMessage({ phoneNumberId, message, context }: ProcessMessageInput) {
-    const resolvedContext = context ?? resolveIncomingChannelContext(phoneNumberId);
-    if (!resolvedContext) {
-        console.info(`Ignoring message for unknown phone_number_id: ${phoneNumberId}`);
-        return;
-    }
-
-    const whatsappClient = new WhatsappClient(resolvedContext);
+    const whatsappClient = new WhatsappClient();
     await whatsappClient.markAsRead(message.id);
     await whatsappClient.sendTypingIndicator(message.id);
 
@@ -67,7 +56,7 @@ export async function processIncomingWhatsappMessage({ phoneNumberId, message, c
     } else if (finalClassification === "busca") {
         try {
             const searchTerm = identifiedTerm ?? normalizedMessage;
-            const offers = await searchOffers(resolvedContext, searchTerm);
+            const offers = await searchOffers(searchTerm);
             totalResults = offers.length;
             results = offers.map((offer) => ({
                 produto: offer.produto,
@@ -91,10 +80,9 @@ export async function processIncomingWhatsappMessage({ phoneNumberId, message, c
     }
 
     const intentId = await registerIntentLog({
-        context: resolvedContext,
         classification: finalClassification,
         whatsappMessageId: message.id,
-        recipientPhoneNumberId: phoneNumberId,
+        recipientPhoneNumberId: env.META_WHATSAPP_PHONE_NUMBER_ID,
         normalizedMessage,
         receivedMessage: rawText,
         userPhone: message.from,
@@ -107,18 +95,12 @@ export async function processIncomingWhatsappMessage({ phoneNumberId, message, c
     });
 
     await registerResponseLog({
-        context: resolvedContext,
         intentId,
         totalResults,
         results,
     });
 }
 
-export async function processIncomingWhatsappStatus(phoneNumberId: string, status: IncomingWhatsappStatus) {
-    const context = resolveIncomingChannelContext(phoneNumberId);
-    if (!context) {
-        return;
-    }
-
-    console.info(`[${context.channel}] status received`, status);
+export async function processIncomingWhatsappStatus(status: IncomingWhatsappStatus) {
+    console.info(`[${env.NODE_ENV}] status received`, status);
 }

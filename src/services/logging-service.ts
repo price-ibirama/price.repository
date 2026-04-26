@@ -1,9 +1,7 @@
 import { createSupabaseClient } from "@/services/supabase";
-import type { ChannelContext } from "@/services/channel-context";
 import type { MessageClassification } from "@/services/message-classifier";
 
 type RegisterIntentInput = {
-    context: ChannelContext;
     classification: MessageClassification;
     whatsappMessageId: string;
     recipientPhoneNumberId: string;
@@ -14,17 +12,13 @@ type RegisterIntentInput = {
 };
 
 type RegisterResponseInput = {
-    context: ChannelContext;
     intentId: string;
     totalResults: number;
     results: Record<string, any>;
 };
 
 export async function registerIntentLog(input: RegisterIntentInput) {
-    const supabase = createSupabaseClient({
-        url: input.context.supabaseUrl,
-        serviceRoleKey: input.context.supabaseServiceRoleKey,
-    });
+    const supabase = createSupabaseClient();
 
     const { data, error } = await supabase.rpc("registrar_log_intencao", {
         p_classificacao: input.classification,
@@ -44,10 +38,7 @@ export async function registerIntentLog(input: RegisterIntentInput) {
 }
 
 export async function registerResponseLog(input: RegisterResponseInput) {
-    const supabase = createSupabaseClient({
-        url: input.context.supabaseUrl,
-        serviceRoleKey: input.context.supabaseServiceRoleKey,
-    });
+    const supabase = createSupabaseClient();
 
     const { error } = await supabase.rpc("registrar_log_resposta", {
         p_id_intencao: input.intentId,

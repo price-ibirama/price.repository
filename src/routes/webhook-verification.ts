@@ -19,7 +19,7 @@ export default async function (app: FastifyInstanceWithZod) {
             "hub.verify_token": verifyToken,
         } = req.query;
 
-        if (mode !== "subscribe" || verifyToken !== env.META_WEBHOOK_VERIFY_TOKEN) {
+        if (mode !== "subscribe" || verifyToken !== env.META_WHATSAPP_WEBHOOK_VERIFY_TOKEN) {
             console.error("WEBHOOK VERIFICATION FAIL");
             return rep.status(StatusCodes.FORBIDDEN).send();
         }

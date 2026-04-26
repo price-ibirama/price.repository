@@ -1,5 +1,4 @@
 import { env } from "@/config/env";
-import type { ChannelContext } from "@/services/channel-context";
 import { renderWhatsappPreview } from "@/utils/render-whatsapp-preview";
 
 type SendTextMessageOptions = {
@@ -8,8 +7,6 @@ type SendTextMessageOptions = {
 };
 
 export class WhatsappClient {
-    constructor(private readonly context: ChannelContext) {}
-
     async markAsRead(messageId: string) {
         await this.dispatch({
             messaging_product: "whatsapp",
@@ -39,8 +36,8 @@ export class WhatsappClient {
     }
 
     private async dispatch(body: Record<string, unknown>, action: string) {
-        if (this.context.deliveryMode === "mock") {
-            console.info(`[mock:${this.context.channel}] ${action}`, JSON.stringify(body, null, 2));
+        if (env.NODE_ENV === 'development') {
+            console.info(action, JSON.stringify(body, null, 2));
 
             if (action === "sendText") {
                 const content = typeof body.text === "object" && body.text && "body" in body.text
@@ -55,15 +52,11 @@ export class WhatsappClient {
             return;
         }
 
-        if (!this.context.whatsappAccessToken) {
-            throw new Error(`Missing WhatsApp access token for channel ${this.context.channel}`);
-        }
-
-        const url = new URL(`https://graph.facebook.com/v${env.META_WHATSAPP_API_VERSION}/${this.context.phoneNumberId}/messages`);
+        const url = new URL(`https://graph.facebook.com/v${env.META_GRAPH_API_VERSION}/${env.META_WHATSAPP_PHONE_NUMBER_ID}/messages`);
         const res = await fetch(url, {
             method: "POST",
             headers: {
-                Authorization: `Bearer ${this.context.whatsappAccessToken}`,
+                Authorization: `Bearer ${env.META_GRAPH_ACCESS_TOKEN}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(body),

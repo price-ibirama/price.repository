@@ -1,9 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { cancel, intro, isCancel, note, outro, spinner, text } from "@clack/prompts";
+import { cancel, isCancel, outro, spinner, text } from "@clack/prompts";
 
 import { env } from "@/config/env";
 import { startApp } from "@/app";
-import { getLocalChannelContext } from "@/services/channel-context";
 import { processIncomingWhatsappMessage } from "@/services/webhook-processor";
 
 async function main() {
@@ -27,14 +26,6 @@ async function main() {
             process.exit(1);
         });
     });
-
-    const localContext = getLocalChannelContext();
-
-    intro("WhatsApp Local Chat");
-    note(
-        [`Canal: ${localContext.channel}`, `Webhook: http://localhost:${env.PORT}/webhook`, `Entrega: ${localContext.deliveryMode}`].join("\n"),
-        "Ambiente"
-    );
 
     console.info("Digite a mensagem para simular o webhook da Meta.");
 
@@ -71,16 +62,12 @@ async function main() {
 
         try {
             await processIncomingWhatsappMessage({
-                phoneNumberId: localContext.phoneNumberId,
-                context: localContext,
-                message: {
-                    id: `local-message-${Date.now()}-${messageCount}-${randomUUID()}`,
-                    from: env.MOCK_USER_PHONE,
-                    timestamp: String(Date.now()),
-                    type: "text",
-                    text: {
-                        body: trimmedBody,
-                    },
+                id: `local-message-${Date.now()}-${messageCount}-${randomUUID()}`,
+                from: env.META_WHATSAPP_PHONE_NUMBER_ID,
+                timestamp: String(Date.now()),
+                type: "text",
+                text: {
+                    body: trimmedBody,
                 },
             });
 

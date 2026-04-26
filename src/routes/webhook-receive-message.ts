@@ -1,3 +1,4 @@
+import { env } from "@/config/env";
 import { processIncomingWhatsappMessage, processIncomingWhatsappStatus } from "@/services/webhook-processor";
 import type { FastifyInstanceWithZod, FastifySchema } from "fastify";
 import { StatusCodes } from "http-status-codes";
@@ -62,15 +63,17 @@ export default async function (app: FastifyInstanceWithZod) {
                 const value = change.value;
                 const phoneNumberId = value.metadata.phone_number_id;
 
+                if (phoneNumberId !== env.META_WHATSAPP_PHONE_NUMBER_ID) {
+                    console.info("Phone number id received (${phoneNumberId}) is recognized.")
+                    continue
+                }
+
                 for (const status of value.statuses ?? []) {
-                    await processIncomingWhatsappStatus(phoneNumberId, status);
+                    await processIncomingWhatsappStatus(status);
                 }
 
                 for (const message of value.messages ?? []) {
-                    await processIncomingWhatsappMessage({
-                        phoneNumberId,
-                        message,
-                    });
+                    await processIncomingWhatsappMessage(message);
                 }
             }
         }
