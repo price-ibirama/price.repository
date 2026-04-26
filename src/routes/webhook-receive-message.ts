@@ -56,7 +56,7 @@ const schema = {
 export default async function (app: FastifyInstanceWithZod) {
     return app.post("/webhook", { schema }, async (req, rep) => {
         const timestamp = new Date().toISOString().replace("T", " ").slice(0, 19);
-        console.info(`Webhook received ${timestamp}`);
+        console.info(`Webhook received ${timestamp} with payload`, JSON.stringify(req.body, null, 4));
 
         for (const entry of req.body.entry) {
             for (const change of entry.changes) {
