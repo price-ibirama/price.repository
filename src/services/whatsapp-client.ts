@@ -62,6 +62,11 @@ export class WhatsappClient {
             body: JSON.stringify(body),
         });
 
+        console.log({
+            url,
+            res: res.text()
+        })
+
         if (!res.ok) {
             const errorBody = await res.text();
             throw new Error(`WhatsApp API request failed (${res.status}): ${errorBody}`);
