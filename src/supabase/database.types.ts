@@ -161,7 +161,6 @@ export type Database = {
           classificacao: string
           id: string
           id_mensagem_whatsapp: string
-          id_telefone_whatsapp_receptor: string
           id_usuario: string | null
           mensagem_normalizada: string | null
           mensagem_recebida: string
@@ -172,7 +171,6 @@ export type Database = {
           classificacao: string
           id?: string
           id_mensagem_whatsapp: string
-          id_telefone_whatsapp_receptor: string
           id_usuario?: string | null
           mensagem_normalizada?: string | null
           mensagem_recebida: string
@@ -183,7 +181,6 @@ export type Database = {
           classificacao?: string
           id?: string
           id_mensagem_whatsapp?: string
-          id_telefone_whatsapp_receptor?: string
           id_usuario?: string | null
           mensagem_normalizada?: string | null
           mensagem_recebida?: string
@@ -392,7 +389,6 @@ export type Database = {
         Args: {
           p_classificacao: string
           p_id_mensagem_whatsapp: string
-          p_id_telefone_whatsapp_receptor: string
           p_mensagem_normalizada: string
           p_mensagem_recebida: string
           p_telefone_usuario: string
@@ -407,15 +403,6 @@ export type Database = {
           p_total_resultados_busca?: number
         }
         Returns: string
-      }
-      resolver_termo_busca: {
-        Args: { p_termo: string; p_threshold?: number }
-        Returns: {
-          origem: string
-          produto: string
-          score: number
-          termo_identificado: string
-        }[]
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
