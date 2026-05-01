@@ -6,11 +6,95 @@ import { WhatsappClient } from "@/services/whatsapp-client";
 import type { IncomingWhatsappStatus, IncomingWhatsappTextMessage } from "@/services/webhook-types";
 import { env } from "@/config/env";
 
-export async function processIncomingWhatsappMessage(message: IncomingWhatsappTextMessage) {
+const USAGE_EXAMPLE = [
+    "Envie o nome de um produto e eu busco as melhores ofertas para você.",
+    "",
+    "Exemplo: ",
+    "> cerveja",
+    "> churrasco",
+    "> arroz",
+]
 
+type BuildFinalResultOutput = {
+    message: string,
+    results: any[],
+}
+
+type BuildFinalResultInput = {
+    searchTerm: string,
+    classification: 'saudacao' | 'desconhecido' | 'busca'
+}
+
+async function buildFinalResult({ searchTerm, classification }: BuildFinalResultInput): Promise<BuildFinalResultOutput> {
+    if (classification === 'saudacao') {
+        return {
+            results: [],
+            message: wrapBetaMessage(
+                "Olá 👋",
+                "",
+                ...USAGE_EXAMPLE
+            )
+        }
+    }
+
+    if (classification === 'busca') {
+        try {
+            const offers = await searchOffers(searchTerm);
+            return {
+                results: offers.map((offer) => ({
+                    produto: offer.produto,
+                    preco: offer.preco,
+                    estabelecimento: offer.estabelecimento,
+                    tipo_estabelecimento: offer.tipo_estabelecimento,
+                    bairro: offer.bairro,
+                    cidade: offer.cidade,
+                    validade_fim: offer.validade_fim,
+                })),
+                message: wrapBetaMessage(buildOffersResponse(searchTerm, offers))
+            }
+        } catch (error) {
+            console.error(error);
+            return {
+                results: [],
+                message: wrapBetaMessage(
+                    "Nao consegui consultar as ofertas agora.",
+                    "",
+                    "Tente novamente em instantes."
+                )
+            }
+        }
+    }
+
+    return {
+        results: [],
+        message: wrapBetaMessage(
+            "Nao consegui identificar um produto na sua mensagem.",
+            "",
+            ...USAGE_EXAMPLE
+        )
+    }
+}
+
+export async function processIncomingWhatsappMessage(message: IncomingWhatsappTextMessage) {
     const whatsappClient = new WhatsappClient();
+
     await whatsappClient.markAsRead(message.id);
     await whatsappClient.sendTypingIndicator(message.id);
+
+    /**
+     * Somente mensagens de texto são permitidas no momento.
+     */
+    if (message.type !== "text") {
+        await whatsappClient.sendText({
+            to: message.from,
+            content: wrapBetaMessage(
+                "Formato invalido. Envie apenas mensagens de texto com o nome do produto.",
+                "",
+                ...USAGE_EXAMPLE
+            ),
+        });
+        return
+    }
 
     const rawText = message.type === "text" ? message.text?.body ?? "" : `Mensagem do tipo ${message.type}`;
     const parsedIntent = message.type === "text"
@@ -24,81 +108,46 @@ export async function processIncomingWhatsappMessage(message: IncomingWhatsappTe
     const finalClassification = classification;
     const identifiedTerm = finalClassification === "busca" ? extractedSearchTerm : null;
 
-    let responseMessage = wrapBetaMessage(
-        "Envie o nome de um produto para buscar ofertas.",
-        "",
-        "Exemplo: ",
-        "> cerveja",
-        "> churrasco",
-        "> arroz",
-    );
-    let totalResults = 0;
-    let results: unknown[] = [];
+    try {
+        const intentId = await registerIntentLog({
+            classification: finalClassification,
+            whatsappMessageId: message.id,
+            normalizedMessage,
+            receivedMessage: rawText,
+            userPhone: message.from,
+            identifiedTerm,
+        });
 
-    if (message.type !== "text") {
-        responseMessage = wrapBetaMessage(
-            "Formato invalido. Envie apenas mensagens de texto com o nome do produto.",
-            "",
-            "Exemplo: ",
-            "> cerveja",
-            "> churrasco",
-            "> arroz",
-        );
-    } else if (finalClassification === "saudacao") {
-        responseMessage = wrapBetaMessage(
-            "Olá! Envie o nome de um produto e eu busco as melhores ofertas para você.",
-            "",
-            "Exemplo: ",
-            "> cerveja",
-            "> churrasco",
-            "> arroz",
-        );
-    } else if (finalClassification === "busca") {
-        try {
-            const searchTerm = identifiedTerm ?? normalizedMessage;
-            const offers = await searchOffers(searchTerm);
-            totalResults = offers.length;
-            results = offers.map((offer) => ({
-                produto: offer.produto,
-                preco: offer.preco,
-                estabelecimento: offer.estabelecimento,
-                tipo_estabelecimento: offer.tipo_estabelecimento,
-                bairro: offer.bairro,
-                cidade: offer.cidade,
-                validade_fim: offer.validade_fim,
-            }));
-            responseMessage = wrapBetaMessage(buildOffersResponse(identifiedTerm ?? searchTerm, offers));
-        } catch (error) {
-            console.error(error);
-            responseMessage = wrapBetaMessage("Nao consegui consultar as ofertas agora. Tente novamente em instantes.");
-        }
-    } else {
-        responseMessage = wrapBetaMessage(
-            "Nao consegui identificar um produto na sua mensagem.",
-            "Envie apenas o nome do produto ou uma busca como preco da cerveja."
-        );
+        const {
+            message: finalMessage,
+            results
+        } = await buildFinalResult({
+            searchTerm: identifiedTerm ?? normalizedMessage,
+            classification
+        })
+
+        await whatsappClient.sendText({
+            to: message.from,
+            content: finalMessage,
+        });
+
+        await registerResponseLog({
+            intentId,
+            totalResults: results.length,
+            results,
+        });
     }
-
-    const intentId = await registerIntentLog({
-        classification: finalClassification,
-        whatsappMessageId: message.id,
-        recipientPhoneNumberId: env.META_WHATSAPP_PHONE_NUMBER_ID,
-        normalizedMessage,
-        receivedMessage: rawText,
-        userPhone: message.from,
-        identifiedTerm,
-    });
-
-    await whatsappClient.sendText({
-        to: message.from,
-        content: responseMessage,
-    });
-
-    await registerResponseLog({
-        intentId,
-        totalResults,
-        results,
-    });
+    catch (e) {
+        console.error(e);
+        await whatsappClient.sendText({
+            to: message.from,
+            content: wrapBetaMessage(
+                "Opss, tive um problema ao processar a mensagem.",
+                "",
+                "Tente novamente em instantes."
+            ),
+        });
+    }
 }
 
 export async function processIncomingWhatsappStatus(status: IncomingWhatsappStatus) {
