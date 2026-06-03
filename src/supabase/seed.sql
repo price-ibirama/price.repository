@@ -118,7 +118,7 @@ VALUES
         'a8b9c0d1-e2f3-4567-a8b9-c0d1e2f3a4b5',
         '3f9d5f77-8e7d-4d2f-9cfe-1a2b3c4d5e6f',
         'd740f3a8-6b1e-4f2d-9c8a-5e7f1b3c9a24',
-        'Rede Morreti',
+        'Rede Moretti',
         'R. Dr. Getúlio Vargas',
         'supermercado',
         true

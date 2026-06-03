@@ -97,7 +97,7 @@ async function buildFinalResult({ searchTerm, classification }: BuildFinalResult
 
 export async function processIncomingWhatsappMessage(message: IncomingWhatsappTextMessage) {
     if (isIncomingMessageExpired(message.timestamp)) {
-        console.info(`[${env.NODE_ENV}] expired message ignored`, {
+        console.info(`expired message ignored`, {
             id: message.id,
             timestamp: message.timestamp,
         });
@@ -200,5 +200,5 @@ export async function processIncomingWhatsappMessage(message: IncomingWhatsappTe
 }
 
 export async function processIncomingWhatsappStatus(status: IncomingWhatsappStatus) {
-    console.info(`[${env.NODE_ENV}] status received`, status);
+    console.info(`status received`, status);
 }

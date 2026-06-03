@@ -55,7 +55,7 @@ export function buildOffersResponse(searchTerm: string, offers: OfferResult[]) {
 
         lines.push(
             "",
-            `${position} ${offer.produto} - ${formatCurrency(offer.preco)}`,
+            `${position} ${offer.produto} - *${formatCurrency(offer.preco)}*`,
             `${storeEmoji} ${offer.estabelecimento}${location ? ` (${location})` : ""}`,
         );
 

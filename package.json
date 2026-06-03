@@ -15,12 +15,12 @@
     "supabase:stop": "npm run supabase -- stop --all",
     "supabase:status": "npm run supabase -- status",
     "supabase:generate:types": "npm run --silent supabase -- gen types --local > src/supabase/database.types.ts",
-    "supabase:db:diff": "npm run supabase -- db diff --local",
+    "supabase:db:diff": "npm run supabase -- db diff",
     "supabase:db:reset": "npm run supabase -- db reset",
     "supabase:migration:new": "npm run supabase -- migration new",
-    "supabase:migration:list": "npm run supabase -- migration list --local",
-    "supabase:migration:up": "npm run supabase -- migration up --local",
-    "supabase:migration:down": "npm run supabase -- migration down --local"
+    "supabase:migration:list": "npm run supabase -- migration list",
+    "supabase:migration:up": "npm run supabase -- migration up",
+    "supabase:migration:down": "npm run supabase -- migration down"
   },
   "repository": {
     "type": "git",
