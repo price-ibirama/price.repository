@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Bot, LoaderCircle, Send, UserRound } from "lucide-react";
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 type ChatMessage = {
@@ -158,6 +158,15 @@ export function WhatsappSimulator() {
     });
   }
 
+  function handleMessageKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
+  }
+
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-4">
       <div className="overflow-hidden rounded-[2rem] bg-muted p-3 ring-1 ring-border">
@@ -205,6 +214,7 @@ export function WhatsappSimulator() {
               id="simulator-message"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={handleMessageKeyDown}
               placeholder="Digite como no WhatsApp: cerveja, arroz, tem leite?"
               rows={3}
               maxLength={500}
