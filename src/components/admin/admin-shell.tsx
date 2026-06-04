@@ -1,6 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ThemeModeMenu } from "@/components/admin/theme-mode-menu";
 import { Badge } from "@/components/ui/badge";
 import {
     Breadcrumb,
@@ -166,6 +167,7 @@ export function AdminShell({ adminEmail, adminRole, children }: AdminShellProps)
                 </SidebarContent>
                 <SidebarFooter>
                     <SidebarMenu>
+                        <ThemeModeMenu />
                         <SidebarMenuItem>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

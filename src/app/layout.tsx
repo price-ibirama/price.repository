@@ -1,4 +1,5 @@
 import "@/app/globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
@@ -16,9 +17,11 @@ type RootLayoutProps = {
 
 export default function RootLayout({ children }: RootLayoutProps) {
     return (
-        <html lang="pt-BR" className={`${GeistSans.variable} ${GeistMono.variable}`}>
+        <html lang="pt-BR" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
             <body>
-                <TooltipProvider>{children}</TooltipProvider>
+                <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+                    <TooltipProvider>{children}</TooltipProvider>
+                </ThemeProvider>
             </body>
         </html>
     );
