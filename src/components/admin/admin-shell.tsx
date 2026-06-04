@@ -43,11 +43,13 @@ import {
   BadgePercent,
   BarChart3,
   Boxes,
+  ClipboardCheck,
   DatabaseZap,
   LogOut,
   MessageCircleQuestion,
   MessageSquareText,
   Store,
+  StoreIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -81,6 +83,12 @@ const navigation: NavigationItem[] = [
     icon: BadgePercent,
   },
   {
+    href: "/admin/estabelecimentos",
+    label: "Estabelecimentos",
+    description: "Lojas e fontes",
+    icon: StoreIcon,
+  },
+  {
     href: "/admin/produtos",
     label: "Produtos",
     description: "Catálogo canônico",
@@ -91,6 +99,12 @@ const navigation: NavigationItem[] = [
     label: "Ingestão",
     description: "Lotes e fontes",
     icon: DatabaseZap,
+  },
+  {
+    href: "/admin/qualidade",
+    label: "Qualidade",
+    description: "Ofertas invalidas",
+    icon: ClipboardCheck,
   },
   {
     href: "/admin/buscas",
@@ -172,7 +186,7 @@ export function AdminShell({
           <SidebarGroup>
             <SidebarGroupLabel>Gestão</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu className="space-y-1">
+              <SidebarMenu className="flex flex-col gap-1">
                 {navigationItems.map((item) => {
                   const Icon = item.icon;
                   const isActive =
@@ -202,7 +216,7 @@ export function AdminShell({
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <SidebarMenu className="space-y-2">
+          <SidebarMenu className="flex flex-col gap-2">
             <ThemeModeMenu />
             <SidebarMenuItem>
               <DropdownMenu>
