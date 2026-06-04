@@ -10,6 +10,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -37,6 +38,7 @@ function getThemeOption(theme: string | undefined) {
 }
 
 export function ThemeModeMenu() {
+    const isMobile = useIsMobile();
     const [mounted, setMounted] = useState(false);
     const { setTheme, theme } = useTheme();
     const selectedTheme = mounted ? theme : "system";
@@ -53,10 +55,10 @@ export function ThemeModeMenu() {
                 <DropdownMenuTrigger asChild>
                     <SidebarMenuButton tooltip="Tema">
                         <Icon />
-                        <span>{selectedOption.label}</span>
+                        <span className="group-data-[collapsible=icon]:hidden">{selectedOption.label}</span>
                     </SidebarMenuButton>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" side="right" className="w-48">
+                <DropdownMenuContent align={isMobile ? "start" : "end"} side={isMobile ? "top" : "right"} className="w-48">
                     <DropdownMenuLabel>Tema</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuRadioGroup value={selectedTheme ?? "system"} onValueChange={setTheme}>

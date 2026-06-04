@@ -1,7 +1,7 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeModeMenu } from "@/components/admin/theme-mode-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
     Breadcrumb,
@@ -37,6 +37,7 @@ import {
     SidebarRail,
     SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { LucideIcon } from "lucide-react";
 import {
     BadgePercent,
@@ -118,10 +119,11 @@ function getCurrentPage(pathname: string) {
 
 export function AdminShell({ adminEmail, adminRole, children }: AdminShellProps) {
     const pathname = usePathname();
+    const isMobile = useIsMobile();
     const currentPage = getCurrentPage(pathname);
 
     return (
-        <SidebarProvider>
+        <SidebarProvider className="min-h-svh bg-background">
             <Sidebar collapsible="icon" variant="inset">
                 <SidebarHeader>
                     <SidebarMenu>
@@ -129,7 +131,7 @@ export function AdminShell({ adminEmail, adminRole, children }: AdminShellProps)
                             <SidebarMenuButton asChild size="lg" tooltip="Price Admin">
                                 <Link href="/admin">
                                     <Store />
-                                    <span className="flex min-w-0 flex-col gap-0.5">
+                                    <span className="flex min-w-0 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
                                         <span className="truncate font-medium">Price Admin</span>
                                         <span className="truncate text-xs text-muted-foreground">Ofertas no WhatsApp</span>
                                     </span>
@@ -155,7 +157,7 @@ export function AdminShell({ adminEmail, adminRole, children }: AdminShellProps)
                                             <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
                                                 <Link href={item.href}>
                                                     <Icon />
-                                                    <span>{item.label}</span>
+                                                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                                                 </Link>
                                             </SidebarMenuButton>
                                         </SidebarMenuItem>
@@ -175,13 +177,13 @@ export function AdminShell({ adminEmail, adminRole, children }: AdminShellProps)
                                         <Avatar className="size-8">
                                             <AvatarFallback>{getInitials(adminEmail)}</AvatarFallback>
                                         </Avatar>
-                                        <span className="flex min-w-0 flex-col gap-0.5">
+                                        <span className="flex min-w-0 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
                                             <span className="truncate font-medium">{adminEmail}</span>
                                             <span className="truncate text-xs text-muted-foreground">{adminRole}</span>
                                         </span>
                                     </SidebarMenuButton>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" side="right" className="w-64">
+                                <DropdownMenuContent align={isMobile ? "start" : "end"} side={isMobile ? "top" : "right"} className="w-64">
                                     <DropdownMenuLabel className="flex flex-col gap-1">
                                         <span className="truncate">{adminEmail}</span>
                                         <Badge className="w-fit" variant="secondary">
@@ -203,11 +205,11 @@ export function AdminShell({ adminEmail, adminRole, children }: AdminShellProps)
                 </SidebarFooter>
                 <SidebarRail />
             </Sidebar>
-            <SidebarInset>
-                <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+            <SidebarInset className="min-w-0">
+                <header className="flex h-14 min-w-0 shrink-0 items-center gap-2 border-b px-4">
                     <SidebarTrigger />
                     <Separator orientation="vertical" className="h-4" />
-                    <Breadcrumb>
+                    <Breadcrumb className="min-w-0">
                         <BreadcrumbList>
                             <BreadcrumbItem>
                                 <BreadcrumbLink asChild>
@@ -215,8 +217,8 @@ export function AdminShell({ adminEmail, adminRole, children }: AdminShellProps)
                                 </BreadcrumbLink>
                             </BreadcrumbItem>
                             <BreadcrumbSeparator />
-                            <BreadcrumbItem>
-                                <BreadcrumbPage>{currentPage.label}</BreadcrumbPage>
+                            <BreadcrumbItem className="min-w-0">
+                                <BreadcrumbPage className="truncate">{currentPage.label}</BreadcrumbPage>
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
@@ -227,7 +229,7 @@ export function AdminShell({ adminEmail, adminRole, children }: AdminShellProps)
                         </Button>
                     </div>
                 </header>
-                <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8">{children}</div>
+                <div className="flex min-w-0 flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8">{children}</div>
             </SidebarInset>
         </SidebarProvider>
     );
