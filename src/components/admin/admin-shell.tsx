@@ -137,7 +137,10 @@ export function AdminShell({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton asChild size="lg" tooltip="Price Admin">
-                <Link href="/admin">
+                <Link
+                  href="/admin"
+                  className="group-data-[collapsible=icon]:grid group-data-[collapsible=icon]:place-items-center"
+                >
                   <Store />
                   <span className="flex min-w-0 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
                     <span className="truncate font-medium">Price Admin</span>
@@ -154,7 +157,7 @@ export function AdminShell({
           <SidebarGroup>
             <SidebarGroupLabel>Gestão</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="space-y-1">
                 {navigation.map((item) => {
                   const Icon = item.icon;
                   const isActive =
@@ -184,7 +187,7 @@ export function AdminShell({
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <SidebarMenu>
+          <SidebarMenu className="space-y-2">
             <ThemeModeMenu />
             <SidebarMenuItem>
               <DropdownMenu>
@@ -213,8 +216,12 @@ export function AdminShell({
                     </Badge>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <button form="admin-signout-form" type="submit">
+                  <DropdownMenuItem asChild variant="destructive">
+                    <button
+                      form="admin-signout-form"
+                      type="submit"
+                      className="w-full"
+                    >
                       <LogOut />
                       Sair
                     </button>
@@ -229,7 +236,7 @@ export function AdminShell({
       <SidebarInset className="min-w-0">
         <header className="flex h-14 min-w-0 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger />
-          <Separator orientation="vertical" className="h-4" />
+          <Separator orientation="vertical" />
           <Breadcrumb className="min-w-0">
             <BreadcrumbList>
               <BreadcrumbItem>
