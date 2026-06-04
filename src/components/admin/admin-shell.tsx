@@ -46,6 +46,7 @@ import {
   DatabaseZap,
   LogOut,
   MessageCircleQuestion,
+  MessageSquareText,
   Store,
 } from "lucide-react";
 import Link from "next/link";
@@ -56,6 +57,7 @@ type AdminShellProps = {
   adminEmail: string;
   adminRole: string;
   children: ReactNode;
+  showDeveloperTools?: boolean;
 };
 
 type NavigationItem = {
@@ -98,6 +100,15 @@ const navigation: NavigationItem[] = [
   },
 ];
 
+const developmentNavigation: NavigationItem[] = [
+  {
+    href: "/admin/simulador",
+    label: "Simulador",
+    description: "Chat local",
+    icon: MessageSquareText,
+  },
+];
+
 function getInitials(email: string) {
   const [name] = email.split("@");
   const parts = name.split(/[._-]/).filter(Boolean);
@@ -111,9 +122,9 @@ function getInitials(email: string) {
   );
 }
 
-function getCurrentPage(pathname: string) {
+function getCurrentPage(pathname: string, navigationItems: NavigationItem[]) {
   return (
-    navigation.find((item) =>
+    navigationItems.find((item) =>
       item.href === "/admin"
         ? pathname === item.href
         : pathname.startsWith(item.href),
@@ -125,10 +136,14 @@ export function AdminShell({
   adminEmail,
   adminRole,
   children,
+  showDeveloperTools = false,
 }: AdminShellProps) {
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const currentPage = getCurrentPage(pathname);
+  const navigationItems = showDeveloperTools
+    ? [...navigation, ...developmentNavigation]
+    : navigation;
+  const currentPage = getCurrentPage(pathname, navigationItems);
 
   return (
     <SidebarProvider className="min-h-svh bg-background">
@@ -158,7 +173,7 @@ export function AdminShell({
             <SidebarGroupLabel>Gestão</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
-                {navigation.map((item) => {
+                {navigationItems.map((item) => {
                   const Icon = item.icon;
                   const isActive =
                     item.href === "/admin"
