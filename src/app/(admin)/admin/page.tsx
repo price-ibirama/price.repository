@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getDashboardMetrics, getSearchGaps } from "@/lib/admin/data";
 
@@ -21,10 +22,10 @@ export default async function AdminDashboardPage() {
     ]);
 
     return (
-        <div className="space-y-8">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-950">Dashboard</h1>
-                <p className="mt-2 text-slate-600">Resumo operacional para manter ofertas e busca saudáveis.</p>
+        <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+                <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+                <p className="text-muted-foreground">Resumo operacional para manter ofertas e busca saudáveis.</p>
             </div>
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {Object.entries(metricLabels).map(([key, label]) => (
@@ -38,40 +39,40 @@ export default async function AdminDashboardPage() {
             </section>
             <Card>
                 <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle>Buscas sem resultado</CardTitle>
-                            <CardDescription>Use estes termos para criar aliases ou cobrir lacunas de catálogo.</CardDescription>
-                        </div>
-                        <Badge variant={searchGaps.length > 0 ? "warning" : "success"}>{searchGaps.length} termos</Badge>
-                    </div>
+                    <CardTitle>Buscas sem resultado</CardTitle>
+                    <CardDescription>Use estes termos para criar aliases ou cobrir lacunas de catálogo.</CardDescription>
+                    <CardAction>
+                        <Badge variant={searchGaps.length > 0 ? "secondary" : "outline"}>{searchGaps.length} termos</Badge>
+                    </CardAction>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Termo</TableHead>
-                                <TableHead>Buscas</TableHead>
-                                <TableHead>Sem resultado</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {searchGaps.map((item) => (
-                                <TableRow key={item.termo}>
-                                    <TableCell className="font-medium">{item.termo}</TableCell>
-                                    <TableCell>{item.buscas}</TableCell>
-                                    <TableCell>{item.semResultado}</TableCell>
-                                </TableRow>
-                            ))}
-                            {searchGaps.length === 0 ? (
+                    {searchGaps.length > 0 ? (
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell className="text-slate-500" colSpan={3}>
-                                        Nenhuma busca sem resultado encontrada.
-                                    </TableCell>
+                                    <TableHead>Termo</TableHead>
+                                    <TableHead>Buscas</TableHead>
+                                    <TableHead>Sem resultado</TableHead>
                                 </TableRow>
-                            ) : null}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {searchGaps.map((item) => (
+                                    <TableRow key={item.termo}>
+                                        <TableCell className="font-medium">{item.termo}</TableCell>
+                                        <TableCell>{item.buscas}</TableCell>
+                                        <TableCell>{item.semResultado}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <Empty>
+                            <EmptyHeader>
+                                <EmptyTitle>Nenhuma lacuna encontrada</EmptyTitle>
+                                <EmptyDescription>As buscas recentes encontraram ofertas compatíveis.</EmptyDescription>
+                            </EmptyHeader>
+                        </Empty>
+                    )}
                 </CardContent>
             </Card>
         </div>

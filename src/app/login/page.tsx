@@ -1,5 +1,7 @@
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { login } from "@/app/login/actions";
 
@@ -26,23 +28,25 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                     <CardDescription>Acesso restrito aos administradores do Price.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form action={login} className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700" htmlFor="email">
-                                Email
-                            </label>
-                            <Input id="email" name="email" type="email" autoComplete="email" required />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700" htmlFor="password">
-                                Senha
-                            </label>
-                            <Input id="password" name="password" type="password" autoComplete="current-password" required />
-                        </div>
-                        {errorMessage ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p> : null}
-                        <Button className="w-full" type="submit">
-                            Entrar
-                        </Button>
+                    <form action={login}>
+                        <FieldGroup>
+                            <Field>
+                                <FieldLabel htmlFor="email">Email</FieldLabel>
+                                <Input id="email" name="email" type="email" autoComplete="email" required />
+                            </Field>
+                            <Field>
+                                <FieldLabel htmlFor="password">Senha</FieldLabel>
+                                <Input id="password" name="password" type="password" autoComplete="current-password" required />
+                            </Field>
+                            {errorMessage ? (
+                                <Alert variant="destructive">
+                                    <AlertDescription>{errorMessage}</AlertDescription>
+                                </Alert>
+                            ) : null}
+                            <Button className="w-full" type="submit">
+                                Entrar
+                            </Button>
+                        </FieldGroup>
                     </form>
                 </CardContent>
             </Card>
