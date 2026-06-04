@@ -1,5 +1,7 @@
 import "@/app/globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { GeistMono } from "geist/font/mono";
+import { GeistSans } from "geist/font/sans";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
@@ -14,7 +16,7 @@ type RootLayoutProps = {
 
 export default function RootLayout({ children }: RootLayoutProps) {
     return (
-        <html lang="pt-BR">
+        <html lang="pt-BR" className={`${GeistSans.variable} ${GeistMono.variable}`}>
             <body>
                 <TooltipProvider>{children}</TooltipProvider>
             </body>
