@@ -1,11 +1,12 @@
+import { FormDialog } from "@/components/admin/form-dialog";
 import { FormMessage } from "@/components/admin/form-message";
+import { FormSelect } from "@/components/admin/form-select";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect } from "@/components/ui/native-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { createEstablishmentAction } from "@/lib/admin/actions";
 import { getCatalogOptions, getEstablishmentSummaries } from "@/lib/admin/data";
@@ -25,6 +26,16 @@ export default async function AdminEstablishmentsPage({ searchParams }: AdminEst
     getCatalogOptions(),
     getEstablishmentSummaries(),
   ]);
+  const cityOptions = options.cidades.map((city) => ({ value: city.id, label: city.label }));
+  const neighborhoodOptions = options.bairros.map((neighborhood) => ({
+    value: neighborhood.id,
+    label: neighborhood.label,
+  }));
+  const typeOptions = [
+    { value: "supermercado", label: "Supermercado" },
+    { value: "farmacia", label: "Farmácia" },
+    { value: "posto_combustivel", label: "Posto de combustível" },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -35,67 +46,49 @@ export default async function AdminEstablishmentsPage({ searchParams }: AdminEst
       <FormMessage error={params.error} success={params.success} />
       <Card>
         <CardHeader>
-          <CardTitle>Novo estabelecimento</CardTitle>
-          <CardDescription>Use esta base para vincular fontes, lotes de ingestão e ofertas.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={createEstablishmentAction}>
-            <FieldGroup>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field>
-                  <FieldLabel htmlFor="nome">Nome</FieldLabel>
-                  <Input id="nome" name="nome" placeholder="Cooper" required />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="tipo">Tipo</FieldLabel>
-                  <NativeSelect id="tipo" name="tipo" defaultValue="supermercado">
-                    <option value="supermercado">Supermercado</option>
-                    <option value="farmacia">Farmácia</option>
-                    <option value="posto_combustivel">Posto de combustível</option>
-                  </NativeSelect>
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="id_cidade">Cidade</FieldLabel>
-                  <NativeSelect id="id_cidade" name="id_cidade" required>
-                    <option value="">Selecione</option>
-                    {options.cidades.map((city) => (
-                      <option key={city.id} value={city.id}>
-                        {city.label}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="id_bairro">Bairro</FieldLabel>
-                  <NativeSelect id="id_bairro" name="id_bairro">
-                    <option value="">Sem bairro</option>
-                    {options.bairros.map((neighborhood) => (
-                      <option key={neighborhood.id} value={neighborhood.id}>
-                        {neighborhood.label}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </Field>
-              </div>
-              <Field>
-                <FieldLabel htmlFor="logradouro">Endereço</FieldLabel>
-                <Input id="logradouro" name="logradouro" placeholder="Rua, número" />
-              </Field>
-              <label className="flex items-center gap-2 text-sm">
-                <input name="ativo" type="checkbox" defaultChecked />
-                Ativo para novas ofertas
-              </label>
-              <Button className="w-fit" type="submit">
-                Cadastrar estabelecimento
-              </Button>
-            </FieldGroup>
-          </form>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
           <CardTitle>Estabelecimentos cadastrados</CardTitle>
           <CardDescription>Resumo de cobertura e ofertas ativas por loja.</CardDescription>
+          <CardAction>
+            <FormDialog
+              title="Novo estabelecimento"
+              description="Use esta base para vincular fontes, lotes de ingestão e ofertas."
+              triggerLabel="Novo estabelecimento"
+            >
+              <form action={createEstablishmentAction}>
+                <FieldGroup>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="nome">Nome</FieldLabel>
+                      <Input id="nome" name="nome" placeholder="Cooper" required />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="tipo">Tipo</FieldLabel>
+                      <FormSelect id="tipo" name="tipo" options={typeOptions} placeholder="Selecione um tipo" defaultValue="supermercado" />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="id_cidade">Cidade</FieldLabel>
+                      <FormSelect id="id_cidade" name="id_cidade" options={cityOptions} placeholder="Selecione uma cidade" required />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="id_bairro">Bairro</FieldLabel>
+                      <FormSelect id="id_bairro" name="id_bairro" options={neighborhoodOptions} placeholder="Sem bairro" />
+                    </Field>
+                  </div>
+                  <Field>
+                    <FieldLabel htmlFor="logradouro">Endereço</FieldLabel>
+                    <Input id="logradouro" name="logradouro" placeholder="Rua, número" />
+                  </Field>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input name="ativo" type="checkbox" defaultChecked />
+                    Ativo para novas ofertas
+                  </label>
+                  <Button className="w-fit" type="submit">
+                    Cadastrar estabelecimento
+                  </Button>
+                </FieldGroup>
+              </form>
+            </FormDialog>
+          </CardAction>
         </CardHeader>
         <CardContent>
           {establishments.length > 0 ? (

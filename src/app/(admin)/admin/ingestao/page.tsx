@@ -1,12 +1,13 @@
+import { FormDialog } from "@/components/admin/form-dialog";
 import { FormMessage } from "@/components/admin/form-message";
+import { FormSelect } from "@/components/admin/form-select";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect } from "@/components/ui/native-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -39,6 +40,14 @@ export default async function AdminIngestionPage({ searchParams }: AdminIngestio
     getSourceSummaries(),
   ]);
   const reviewItems = items.filter((item) => ["pendente", "aprovado"].includes(item.status));
+  const establishmentOptions = options.estabelecimentos.map((establishment) => ({
+    value: establishment.id,
+    label: establishment.label,
+  }));
+  const sourceOptions = options.fontes.map((source) => ({ value: source.id, label: source.label }));
+  const sourceTypeOptions = sourceTypes.map((type) => ({ value: type, label: type }));
+  const productOptions = options.produtos.map((product) => ({ value: product.id, label: product.label }));
+  const reviewProductOptions = [{ value: "__create__", label: "Criar produto novo" }, ...productOptions];
 
   return (
     <div className="flex flex-col gap-6">
@@ -47,108 +56,92 @@ export default async function AdminIngestionPage({ searchParams }: AdminIngestio
         <p className="text-muted-foreground">Crie fontes, cole ofertas extraídas e publique somente após revisão humana.</p>
       </div>
       <FormMessage error={params.error} success={params.success} />
-      <section className="grid gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Nova fonte</CardTitle>
-            <CardDescription>Mapeia de onde as ofertas foram coletadas.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={createSourceAction}>
-              <FieldGroup>
-                <div className="grid gap-4 md:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Fluxo de ingestão</CardTitle>
+          <CardDescription>Cadastre fontes e crie lotes manuais sem deixar formulários espalhados na tela.</CardDescription>
+          <CardAction className="flex flex-wrap gap-2">
+            <FormDialog title="Nova fonte" description="Mapeia de onde as ofertas foram coletadas." triggerLabel="Nova fonte">
+              <form action={createSourceAction}>
+                <FieldGroup>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="fonte_nome">Nome</FieldLabel>
+                      <Input id="fonte_nome" name="nome" placeholder="Ofertas Cooper Ibirama" required />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="fonte_tipo">Tipo</FieldLabel>
+                      <FormSelect id="fonte_tipo" name="tipo" options={sourceTypeOptions} placeholder="Selecione um tipo" defaultValue="texto" />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="fonte_estabelecimento">Estabelecimento</FieldLabel>
+                      <FormSelect
+                        id="fonte_estabelecimento"
+                        name="id_estabelecimento"
+                        options={establishmentOptions}
+                        placeholder="Sem vínculo"
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="fonte_url">URL</FieldLabel>
+                      <Input id="fonte_url" name="url" placeholder="https://..." />
+                    </Field>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input name="ativo" type="checkbox" defaultChecked />
+                    Fonte ativa
+                  </label>
+                  <Button className="w-fit" type="submit">
+                    Cadastrar fonte
+                  </Button>
+                </FieldGroup>
+              </form>
+            </FormDialog>
+            <FormDialog
+              title="Novo lote manual"
+              description="V1 sem IA: cole uma linha por produto e revise antes de publicar."
+              triggerLabel="Novo lote manual"
+            >
+              <form action={createManualIngestionBatchAction}>
+                <FieldGroup>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="lote_estabelecimento">Estabelecimento</FieldLabel>
+                      <FormSelect
+                        id="lote_estabelecimento"
+                        name="id_estabelecimento"
+                        options={establishmentOptions}
+                        placeholder="Selecione um estabelecimento"
+                        required
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="lote_fonte">Fonte</FieldLabel>
+                      <FormSelect id="lote_fonte" name="id_fonte" options={sourceOptions} placeholder="Sem fonte" />
+                    </Field>
+                  </div>
                   <Field>
-                    <FieldLabel htmlFor="fonte_nome">Nome</FieldLabel>
-                    <Input id="fonte_nome" name="nome" placeholder="Ofertas Cooper Ibirama" required />
+                    <FieldLabel htmlFor="conteudo_original">Itens extraídos</FieldLabel>
+                    <Textarea
+                      id="conteudo_original"
+                      name="conteudo_original"
+                      placeholder={
+                        "Arroz parboilizado 5kg; 21,90; 15/06/2026; pct; Tio João; oferta do panfleto\nLeite integral 1L; 4,59; 10/06/2026; L"
+                      }
+                      required
+                      rows={8}
+                    />
+                    <FieldDescription>Formato: nome; preço; validade final; unidade; marca; observação.</FieldDescription>
                   </Field>
-                  <Field>
-                    <FieldLabel htmlFor="fonte_tipo">Tipo</FieldLabel>
-                    <NativeSelect id="fonte_tipo" name="tipo" defaultValue="texto">
-                      {sourceTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </NativeSelect>
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="fonte_estabelecimento">Estabelecimento</FieldLabel>
-                    <NativeSelect id="fonte_estabelecimento" name="id_estabelecimento">
-                      <option value="">Sem vínculo</option>
-                      {options.estabelecimentos.map((establishment) => (
-                        <option key={establishment.id} value={establishment.id}>
-                          {establishment.label}
-                        </option>
-                      ))}
-                    </NativeSelect>
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="fonte_url">URL</FieldLabel>
-                    <Input id="fonte_url" name="url" placeholder="https://..." />
-                  </Field>
-                </div>
-                <label className="flex items-center gap-2 text-sm">
-                  <input name="ativo" type="checkbox" defaultChecked />
-                  Fonte ativa
-                </label>
-                <Button className="w-fit" type="submit">
-                  Cadastrar fonte
-                </Button>
-              </FieldGroup>
-            </form>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Novo lote manual</CardTitle>
-            <CardDescription>V1 sem IA: cole uma linha por produto e revise antes de publicar.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={createManualIngestionBatchAction}>
-              <FieldGroup>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field>
-                    <FieldLabel htmlFor="lote_estabelecimento">Estabelecimento</FieldLabel>
-                    <NativeSelect id="lote_estabelecimento" name="id_estabelecimento" required>
-                      <option value="">Selecione</option>
-                      {options.estabelecimentos.map((establishment) => (
-                        <option key={establishment.id} value={establishment.id}>
-                          {establishment.label}
-                        </option>
-                      ))}
-                    </NativeSelect>
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="lote_fonte">Fonte</FieldLabel>
-                    <NativeSelect id="lote_fonte" name="id_fonte">
-                      <option value="">Sem fonte</option>
-                      {options.fontes.map((source) => (
-                        <option key={source.id} value={source.id}>
-                          {source.label}
-                        </option>
-                      ))}
-                    </NativeSelect>
-                  </Field>
-                </div>
-                <Field>
-                  <FieldLabel htmlFor="conteudo_original">Itens extraídos</FieldLabel>
-                  <Textarea
-                    id="conteudo_original"
-                    name="conteudo_original"
-                    placeholder={"Arroz parboilizado 5kg; 21,90; 15/06/2026; pct; Tio João; oferta do panfleto\nLeite integral 1L; 4,59; 10/06/2026; L"}
-                    required
-                    rows={8}
-                  />
-                  <FieldDescription>Formato: nome; preço; validade final; unidade; marca; observação.</FieldDescription>
-                </Field>
-                <Button className="w-fit" type="submit">
-                  Criar lote para revisão
-                </Button>
-              </FieldGroup>
-            </form>
-          </CardContent>
-        </Card>
-      </section>
+                  <Button className="w-fit" type="submit">
+                    Criar lote para revisão
+                  </Button>
+                </FieldGroup>
+              </form>
+            </FormDialog>
+          </CardAction>
+        </CardHeader>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>Itens para revisão</CardTitle>
@@ -163,8 +156,7 @@ export default async function AdminIngestionPage({ searchParams }: AdminIngestio
                   <TableHead>Origem</TableHead>
                   <TableHead>Preço</TableHead>
                   <TableHead>Matching</TableHead>
-                  <TableHead>Publicar</TableHead>
-                  <TableHead>Rejeitar</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -194,29 +186,42 @@ export default async function AdminIngestionPage({ searchParams }: AdminIngestio
                       </div>
                     </TableCell>
                     <TableCell>
-                      <form action={publishIngestionItemAction} className="flex flex-col gap-2">
-                        <input name="item_id" type="hidden" value={item.id} />
-                        <NativeSelect name="product_mode" defaultValue={item.produtoId ?? item.candidatos[0]?.id ?? "__create__"}>
-                          <option value="__create__">Criar produto novo</option>
-                          {options.produtos.map((product) => (
-                            <option key={product.id} value={product.id}>
-                              {product.label}
-                            </option>
-                          ))}
-                        </NativeSelect>
-                        <Button size="sm" type="submit">
-                          Publicar
-                        </Button>
-                      </form>
-                    </TableCell>
-                    <TableCell>
-                      <form action={rejectIngestionItemAction} className="flex flex-col gap-2">
-                        <input name="item_id" type="hidden" value={item.id} />
-                        <Input name="reason" placeholder="Motivo" />
-                        <Button size="sm" type="submit" variant="outline">
-                          Rejeitar
-                        </Button>
-                      </form>
+                      <div className="flex flex-wrap gap-2">
+                        <FormDialog title="Publicar item" description="Confirme o produto vinculado antes de criar a oferta." triggerLabel="Publicar">
+                          <form action={publishIngestionItemAction}>
+                            <FieldGroup>
+                              <input name="item_id" type="hidden" value={item.id} />
+                              <Field>
+                                <FieldLabel htmlFor={`product_mode_${item.id}`}>Produto</FieldLabel>
+                                <FormSelect
+                                  id={`product_mode_${item.id}`}
+                                  name="product_mode"
+                                  options={reviewProductOptions}
+                                  placeholder="Selecione um produto"
+                                  defaultValue={item.produtoId ?? item.candidatos[0]?.id ?? "__create__"}
+                                />
+                              </Field>
+                              <Button className="w-fit" type="submit">
+                                Publicar oferta
+                              </Button>
+                            </FieldGroup>
+                          </form>
+                        </FormDialog>
+                        <FormDialog title="Rejeitar item" description="Informe o motivo para manter a auditoria da revisão." triggerLabel="Rejeitar">
+                          <form action={rejectIngestionItemAction}>
+                            <FieldGroup>
+                              <input name="item_id" type="hidden" value={item.id} />
+                              <Field>
+                                <FieldLabel htmlFor={`reason_${item.id}`}>Motivo</FieldLabel>
+                                <Input id={`reason_${item.id}`} name="reason" placeholder="Motivo" />
+                              </Field>
+                              <Button className="w-fit" type="submit" variant="outline">
+                                Rejeitar item
+                              </Button>
+                            </FieldGroup>
+                          </form>
+                        </FormDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -1,11 +1,12 @@
+import { FormDialog } from "@/components/admin/form-dialog";
 import { FormMessage } from "@/components/admin/form-message";
+import { FormSelect } from "@/components/admin/form-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect } from "@/components/ui/native-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { createSearchTermAction } from "@/lib/admin/actions";
 import { getCatalogOptions, getSearchGaps } from "@/lib/admin/data";
@@ -25,6 +26,18 @@ export default async function AdminSearchesPage({ searchParams }: AdminSearchesP
     getSearchGaps(40),
     getCatalogOptions(),
   ]);
+  const targetTypeOptions = [
+    { value: "produto", label: "Produto" },
+    { value: "categoria", label: "Categoria" },
+    { value: "estabelecimento", label: "Estabelecimento" },
+    { value: "marca", label: "Marca" },
+  ];
+  const productOptions = options.produtos.map((product) => ({ value: product.id, label: product.label }));
+  const categoryOptions = options.categorias.map((category) => ({ value: category.id, label: category.label }));
+  const establishmentOptions = options.estabelecimentos.map((establishment) => ({
+    value: establishment.id,
+    label: establishment.label,
+  }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -35,84 +48,69 @@ export default async function AdminSearchesPage({ searchParams }: AdminSearchesP
       <FormMessage error={params.error} success={params.success} />
       <Card>
         <CardHeader>
-          <CardTitle>Novo termo de busca</CardTitle>
-          <CardDescription>Use quando sinônimos simples não forem suficientes para encontrar a oferta certa.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={createSearchTermAction}>
-            <FieldGroup>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <Field>
-                  <FieldLabel htmlFor="termo">Termo</FieldLabel>
-                  <Input id="termo" name="termo" placeholder="rancho" required />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="tipo_alvo">Tipo de alvo</FieldLabel>
-                  <NativeSelect id="tipo_alvo" name="tipo_alvo" defaultValue="produto">
-                    <option value="produto">Produto</option>
-                    <option value="categoria">Categoria</option>
-                    <option value="estabelecimento">Estabelecimento</option>
-                    <option value="marca">Marca</option>
-                  </NativeSelect>
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="peso">Peso</FieldLabel>
-                  <Input id="peso" name="peso" type="number" min="0" max="1" step="0.1" defaultValue="0.7" />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="marca">Marca</FieldLabel>
-                  <Input id="marca" name="marca" placeholder="Somente para tipo marca" />
-                </Field>
-              </div>
-              <div className="grid gap-4 md:grid-cols-3">
-                <Field>
-                  <FieldLabel htmlFor="id_produto">Produto</FieldLabel>
-                  <NativeSelect id="id_produto" name="id_produto">
-                    <option value="">Sem produto</option>
-                    {options.produtos.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.label}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                  <FieldDescription>Obrigatório quando o tipo for produto.</FieldDescription>
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="id_categoria">Categoria</FieldLabel>
-                  <NativeSelect id="id_categoria" name="id_categoria">
-                    <option value="">Sem categoria</option>
-                    {options.categorias.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.label}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                  <FieldDescription>Obrigatório quando o tipo for categoria.</FieldDescription>
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="id_estabelecimento">Estabelecimento</FieldLabel>
-                  <NativeSelect id="id_estabelecimento" name="id_estabelecimento">
-                    <option value="">Sem estabelecimento</option>
-                    {options.estabelecimentos.map((establishment) => (
-                      <option key={establishment.id} value={establishment.id}>
-                        {establishment.label}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                  <FieldDescription>Obrigatório quando o tipo for estabelecimento.</FieldDescription>
-                </Field>
-              </div>
-              <Button className="w-fit" type="submit">
-                Cadastrar termo
-              </Button>
-            </FieldGroup>
-          </form>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
           <CardTitle>Buscas sem resultado</CardTitle>
           <CardDescription>Fila para melhorar aliases, categorias e cobertura de ofertas.</CardDescription>
+          <CardAction>
+            <FormDialog
+              title="Novo termo de busca"
+              description="Use quando sinônimos simples não forem suficientes para encontrar a oferta certa."
+              triggerLabel="Novo termo"
+            >
+              <form action={createSearchTermAction}>
+                <FieldGroup>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="termo">Termo</FieldLabel>
+                      <Input id="termo" name="termo" placeholder="rancho" required />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="tipo_alvo">Tipo de alvo</FieldLabel>
+                      <FormSelect
+                        id="tipo_alvo"
+                        name="tipo_alvo"
+                        options={targetTypeOptions}
+                        placeholder="Selecione um tipo"
+                        defaultValue="produto"
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="peso">Peso</FieldLabel>
+                      <Input id="peso" name="peso" type="number" min="0" max="1" step="0.1" defaultValue="0.7" />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="marca">Marca</FieldLabel>
+                      <Input id="marca" name="marca" placeholder="Somente para tipo marca" />
+                    </Field>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Field>
+                      <FieldLabel htmlFor="id_produto">Produto</FieldLabel>
+                      <FormSelect id="id_produto" name="id_produto" options={productOptions} placeholder="Sem produto" />
+                      <FieldDescription>Obrigatório quando o tipo for produto.</FieldDescription>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="id_categoria">Categoria</FieldLabel>
+                      <FormSelect id="id_categoria" name="id_categoria" options={categoryOptions} placeholder="Sem categoria" />
+                      <FieldDescription>Obrigatório quando o tipo for categoria.</FieldDescription>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="id_estabelecimento">Estabelecimento</FieldLabel>
+                      <FormSelect
+                        id="id_estabelecimento"
+                        name="id_estabelecimento"
+                        options={establishmentOptions}
+                        placeholder="Sem estabelecimento"
+                      />
+                      <FieldDescription>Obrigatório quando o tipo for estabelecimento.</FieldDescription>
+                    </Field>
+                  </div>
+                  <Button className="w-fit" type="submit">
+                    Cadastrar termo
+                  </Button>
+                </FieldGroup>
+              </form>
+            </FormDialog>
+          </CardAction>
         </CardHeader>
         <CardContent>
           {searchGaps.length > 0 ? (

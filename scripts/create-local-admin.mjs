@@ -1,25 +1,20 @@
 import { createClient } from "@supabase/supabase-js";
+import { isLocalSupabaseUrl, loadLocalEnv } from "./local-env.mjs";
 
 const DEFAULT_SUPABASE_URL = "http://127.0.0.1:55321";
-const DEFAULT_SUPABASE_SECRET_KEY = "__REMOVED_SUPABASE_SECRET__";
 const DEFAULT_ADMIN_EMAIL = "admin@price.local";
 const DEFAULT_ADMIN_PASSWORD = "PriceLocal@2026!";
 const DEFAULT_ADMIN_ROLE = "owner";
 
+loadLocalEnv();
+
 const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? DEFAULT_SUPABASE_URL;
-const supabaseSecretKey =
-  process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? DEFAULT_SUPABASE_SECRET_KEY;
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 const adminEmail = process.env.ADMIN_EMAIL ?? DEFAULT_ADMIN_EMAIL;
 const adminPassword = process.env.ADMIN_PASSWORD ?? DEFAULT_ADMIN_PASSWORD;
 const adminRole = process.env.ADMIN_ROLE ?? DEFAULT_ADMIN_ROLE;
 
-const isLocalSupabase =
-  supabaseUrl.startsWith("http://127.0.0.1") ||
-  supabaseUrl.startsWith("http://localhost") ||
-  supabaseUrl.startsWith("https://127.0.0.1") ||
-  supabaseUrl.startsWith("https://localhost");
-
-if (!isLocalSupabase && process.env.ALLOW_REMOTE_ADMIN_SEED !== "true") {
+if (!isLocalSupabaseUrl(supabaseUrl) && process.env.ALLOW_REMOTE_ADMIN_SEED !== "true") {
   throw new Error("Refusing to seed admin outside localhost. Set ALLOW_REMOTE_ADMIN_SEED=true to override.");
 }
 

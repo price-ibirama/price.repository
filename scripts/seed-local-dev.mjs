@@ -1,16 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
+import { isLocalSupabaseUrl, loadLocalEnv } from "./local-env.mjs";
 
 const DEFAULT_SUPABASE_URL = "http://127.0.0.1:55321";
-const DEFAULT_SUPABASE_SECRET_KEY = "__REMOVED_SUPABASE_SECRET__";
+
+loadLocalEnv();
 
 const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? DEFAULT_SUPABASE_URL;
-const supabaseSecretKey =
-  process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? DEFAULT_SUPABASE_SECRET_KEY;
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const localHosts = new Set(["127.0.0.1", "localhost", "::1"]);
-const parsedUrl = new URL(supabaseUrl);
-
-if (!localHosts.has(parsedUrl.hostname)) {
+if (!isLocalSupabaseUrl(supabaseUrl)) {
   throw new Error(`Refusing to seed a non-local Supabase project: ${supabaseUrl}`);
 }
 

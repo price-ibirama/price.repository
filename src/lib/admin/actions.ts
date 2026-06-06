@@ -22,30 +22,24 @@ type ActionPath =
 
 const writeRoles = new Set<AdminRole>(["owner", "admin", "editor"]);
 const publishRoles = new Set<AdminRole>(["owner", "admin"]);
+const emptySelectValues = new Set(["", "__none__"]);
 
-const optionalUuid = z4
-  .string()
-  .trim()
-  .uuid()
-  .optional()
-  .or(z4.literal(""))
-  .transform((value) => value || null);
+function normalizeOptionalFormValue(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
 
-const optionalText = z4
-  .string()
-  .trim()
-  .optional()
-  .or(z4.literal(""))
-  .transform((value) => value || null);
+  const trimmedValue = value.trim();
+  return emptySelectValues.has(trimmedValue) ? null : trimmedValue;
+}
 
+const optionalUuid = z4.preprocess(normalizeOptionalFormValue, z4.string().uuid().nullable());
+const optionalText = z4.preprocess(normalizeOptionalFormValue, z4.string().nullable());
 const requiredText = z4.string().trim().min(1);
-const optionalDate = z4
-  .string()
-  .trim()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .optional()
-  .or(z4.literal(""))
-  .transform((value) => value || null);
+const optionalDate = z4.preprocess(
+  normalizeOptionalFormValue,
+  z4.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+);
 
 function toNumber(value: FormDataEntryValue | null) {
   if (typeof value !== "string") {
@@ -193,7 +187,7 @@ export async function createCategoryAction(formData: FormData) {
 const productSchema = z4.object({
   nome: requiredText,
   id_categoria: optionalUuid,
-  unidade: z4.enum(["kg", "g", "L", "ml", "un", "cx", "pct", "dz"]).nullable(),
+  unidade: z4.preprocess(normalizeOptionalFormValue, z4.enum(["kg", "g", "L", "ml", "un", "cx", "pct", "dz"]).nullable()),
 });
 
 export async function createProductAction(formData: FormData) {

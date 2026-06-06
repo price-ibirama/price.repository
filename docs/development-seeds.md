@@ -10,6 +10,8 @@ Execute a partir da raiz do repositório:
 npm run seed:local
 ```
 
+Os scripts carregam `.env` local automaticamente. Mantenha `SUPABASE_SECRET_KEY` ou `SUPABASE_SERVICE_ROLE_KEY` somente no `.env`, nunca em arquivos versionados.
+
 Para resetar o banco local e popular dados + usuário admin:
 
 ```bash
@@ -26,6 +28,7 @@ Credenciais padrão do admin local:
 - `src/supabase/seed.sql` é intencionalmente vazio.
 - `src/supabase/config.toml` mantém `[db.seed].enabled = false`.
 - `scripts/seed-local-dev.mjs` recusa qualquer URL que não seja `localhost`, `127.0.0.1` ou `::1`.
+- Os scripts não possuem fallback de secret key hardcoded.
 - Não use `supabase db push --include-seed` para produção.
 
 Essa configuração impede que dados fictícios de desenvolvimento sejam aplicados automaticamente em staging ou produção pela Supabase CLI.

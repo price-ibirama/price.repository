@@ -1,12 +1,13 @@
+import { FormDialog } from "@/components/admin/form-dialog";
 import { FormMessage } from "@/components/admin/form-message";
+import { FormSelect } from "@/components/admin/form-select";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect } from "@/components/ui/native-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { createOfferAction, updateOfferStatusAction } from "@/lib/admin/actions";
@@ -29,6 +30,15 @@ export default async function AdminOffersPage({ searchParams }: AdminOffersPageP
     getOfferSummaries(),
     getCatalogOptions(),
   ]);
+  const establishmentOptions = options.estabelecimentos.map((establishment) => ({
+    value: establishment.id,
+    label: establishment.label,
+  }));
+  const productOptions = options.produtos.map((product) => ({ value: product.id, label: product.label }));
+  const statusOptions = [
+    { value: "rascunho", label: "Salvar rascunho" },
+    { value: "publicada", label: "Publicar agora" },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -39,70 +49,65 @@ export default async function AdminOffersPage({ searchParams }: AdminOffersPageP
       <FormMessage error={params.error} success={params.success} />
       <Card>
         <CardHeader>
-          <CardTitle>Nova oferta</CardTitle>
-          <CardDescription>Publicação manual com bloqueio de preço inválido, validade invertida e duplicidade.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={createOfferAction}>
-            <FieldGroup>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <Field>
-                  <FieldLabel htmlFor="id_estabelecimento">Estabelecimento</FieldLabel>
-                  <NativeSelect id="id_estabelecimento" name="id_estabelecimento" required>
-                    <option value="">Selecione</option>
-                    {options.estabelecimentos.map((establishment) => (
-                      <option key={establishment.id} value={establishment.id}>
-                        {establishment.label}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="id_produto">Produto</FieldLabel>
-                  <NativeSelect id="id_produto" name="id_produto" required>
-                    <option value="">Selecione</option>
-                    {options.produtos.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.label}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="preco">Preço</FieldLabel>
-                  <Input id="preco" name="preco" inputMode="decimal" placeholder="9,99" required />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="status">Status</FieldLabel>
-                  <NativeSelect id="status" name="status" defaultValue="rascunho">
-                    <option value="rascunho">Salvar rascunho</option>
-                    <option value="publicada">Publicar agora</option>
-                  </NativeSelect>
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="validade_inicio">Início</FieldLabel>
-                  <Input id="validade_inicio" name="validade_inicio" type="date" />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="validade_fim">Fim</FieldLabel>
-                  <Input id="validade_fim" name="validade_fim" type="date" />
-                </Field>
-              </div>
-              <Field>
-                <FieldLabel htmlFor="observacao">Observação</FieldLabel>
-                <Textarea id="observacao" name="observacao" placeholder="Ex.: enquanto durarem os estoques" />
-              </Field>
-              <Button className="w-fit" type="submit">
-                Salvar oferta
-              </Button>
-            </FieldGroup>
-          </form>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
           <CardTitle>Ofertas cadastradas</CardTitle>
           <CardDescription>Histórico, origem e status das ofertas publicadas, rascunhos e arquivadas.</CardDescription>
+          <CardAction>
+            <FormDialog
+              title="Nova oferta"
+              description="Publicação manual com bloqueio de preço inválido, validade invertida e duplicidade."
+              triggerLabel="Nova oferta"
+            >
+              <form action={createOfferAction}>
+                <FieldGroup>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="id_estabelecimento">Estabelecimento</FieldLabel>
+                      <FormSelect
+                        id="id_estabelecimento"
+                        name="id_estabelecimento"
+                        options={establishmentOptions}
+                        placeholder="Selecione um estabelecimento"
+                        required
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="id_produto">Produto</FieldLabel>
+                      <FormSelect
+                        id="id_produto"
+                        name="id_produto"
+                        options={productOptions}
+                        placeholder="Selecione um produto"
+                        required
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="preco">Preço</FieldLabel>
+                      <Input id="preco" name="preco" inputMode="decimal" placeholder="9,99" required />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="status">Status</FieldLabel>
+                      <FormSelect id="status" name="status" options={statusOptions} placeholder="Selecione um status" defaultValue="rascunho" />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="validade_inicio">Início</FieldLabel>
+                      <Input id="validade_inicio" name="validade_inicio" type="date" />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="validade_fim">Fim</FieldLabel>
+                      <Input id="validade_fim" name="validade_fim" type="date" />
+                    </Field>
+                  </div>
+                  <Field>
+                    <FieldLabel htmlFor="observacao">Observação</FieldLabel>
+                    <Textarea id="observacao" name="observacao" placeholder="Ex.: enquanto durarem os estoques" />
+                  </Field>
+                  <Button className="w-fit" type="submit">
+                    Salvar oferta
+                  </Button>
+                </FieldGroup>
+              </form>
+            </FormDialog>
+          </CardAction>
         </CardHeader>
         <CardContent>
           {offers.length > 0 ? (
