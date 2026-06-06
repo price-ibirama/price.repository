@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto";
 
 import { evaluateOfferQuality, hasBlockingOfferIssue } from "@/lib/admin/offer-quality";
+import { extractFlyerOffersWithGroq, FlyerExtractionError } from "@/lib/admin/flyer-extraction";
 import { parseManualIngestionText, normalizeProductName } from "@/lib/admin/ingestion-parser";
 import { type AdminRole, requireAdmin } from "@/lib/admin/auth";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -514,6 +515,11 @@ const ingestionBatchSchema = z4.object({
   conteudo_original: z4.string().trim().min(3),
 });
 
+const flyerIngestionBatchSchema = z4.object({
+  id_estabelecimento: z4.string().uuid(),
+  id_fonte: optionalUuid,
+});
+
 export async function createManualIngestionBatchAction(formData: FormData) {
   const admin = await requireRole(writeRoles, "/admin/ingestao");
   const parsed = parseResult(
@@ -601,6 +607,148 @@ export async function createManualIngestionBatchAction(formData: FormData) {
   });
   revalidateAdmin(["/admin", "/admin/ingestao"]);
   redirectWithMessage("/admin/ingestao", "success", "Lote criado e itens enviados para revisão.");
+}
+
+export async function createFlyerIngestionBatchAction(formData: FormData) {
+  const admin = await requireRole(writeRoles, "/admin/ingestao");
+  const parsed = parseResult(
+    flyerIngestionBatchSchema.safeParse({
+      id_estabelecimento: formData.get("id_estabelecimento"),
+      id_fonte: formData.get("id_fonte"),
+    }),
+    "/admin/ingestao",
+  );
+  const flyerFile = formData.get("panfleto");
+
+  if (!(flyerFile instanceof File) || flyerFile.size === 0) {
+    redirectWithMessage("/admin/ingestao", "error", "Envie uma imagem de panfleto para processar.");
+  }
+
+  const supabase = createServiceClient();
+  const [{ data: establishment }, { data: source }] = await Promise.all([
+    supabase.from("estabelecimentos").select("nome").eq("id", parsed.id_estabelecimento).single(),
+    parsed.id_fonte
+      ? supabase.from("fontes_dados").select("nome").eq("id", parsed.id_fonte).single()
+      : Promise.resolve({ data: null }),
+  ]);
+  let extraction;
+
+  try {
+    extraction = await extractFlyerOffersWithGroq({
+      file: new Uint8Array(await flyerFile.arrayBuffer()),
+      mimeType: flyerFile.type,
+      filename: flyerFile.name,
+      establishmentName: establishment?.nome ?? null,
+      sourceName: source?.nome ?? null,
+    });
+  } catch (error) {
+    const message =
+      error instanceof FlyerExtractionError ? error.message : "Não foi possível processar o panfleto com a Groq.";
+    redirectWithMessage("/admin/ingestao", "error", message);
+  }
+
+  const { data: batch, error: batchError } = await supabase
+    .from("lotes_ingestao")
+    .insert({
+      id_estabelecimento: parsed.id_estabelecimento,
+      id_fonte: parsed.id_fonte,
+      status: "pendente_revisao",
+      arquivo_origem: flyerFile.name,
+      conteudo_original: extraction.rawText,
+      total_itens: extraction.offers.length,
+      criado_por: admin.userId,
+      raw_payload: {
+        origem: "groq_panfleto",
+        arquivo: {
+          nome: flyerFile.name,
+          tipo: flyerFile.type,
+          tamanho: flyerFile.size,
+        },
+        provider: extraction.provider,
+        model: extraction.model,
+        usage: extraction.usage,
+        warnings: extraction.warnings,
+      },
+    })
+    .select("id")
+    .single();
+
+  if (batchError || !batch) {
+    redirectWithMessage("/admin/ingestao", "error", batchError?.message ?? "Não foi possível criar o lote do panfleto.");
+  }
+
+  const candidates = await getProductCandidates();
+  const items = extraction.offers.map((item, index) => {
+    const input: ExtractedOfferProduct = {
+      nomeOriginal: item.nomeOriginal,
+      marca: item.marca,
+      quantidade: item.quantidade,
+      unidade: item.unidade,
+      embalagem: item.embalagem,
+      categoria: item.categoriaSugerida,
+    };
+    const ranked = rankProductCandidates(input, candidates).slice(0, 5);
+    const best = ranked[0];
+
+    return {
+      id_lote: batch.id,
+      id_produto: best && best.confidence >= 0.62 ? best.candidate.id : null,
+      nome_original: item.nomeOriginal,
+      nome_normalizado: normalizeProductName(item.nomeOriginal),
+      marca: item.marca,
+      quantidade: item.quantidade,
+      unidade: item.unidade,
+      embalagem: item.embalagem,
+      categoria_sugerida: item.categoriaSugerida,
+      preco: item.preco,
+      validade_inicio: item.validadeInicio,
+      validade_fim: item.validadeFim,
+      observacao: item.observacao,
+      status: "pendente",
+      confidence: best?.confidence ?? item.confidence,
+      candidatos: ranked.map((candidate) => ({
+        id: candidate.candidate.id,
+        nome: candidate.candidate.nome,
+        confidence: candidate.confidence,
+        reasons: candidate.reasons,
+      })),
+      raw_payload: {
+        linha: index + 1,
+        origem: "groq_panfleto",
+        extraction_confidence: item.confidence,
+        extracted_offer: item,
+      },
+      fingerprint_origem: `groq:${hashFingerprint([
+        parsed.id_estabelecimento,
+        parsed.id_fonte,
+        flyerFile.name,
+        item.nomeOriginal,
+        item.preco,
+        item.validadeFim,
+      ])}`,
+    };
+  });
+  const { error: itemsError } = await supabase.from("itens_ingestao").insert(items);
+
+  if (itemsError) {
+    await supabase.from("lotes_ingestao").update({ status: "erro" }).eq("id", batch.id);
+    redirectWithMessage("/admin/ingestao", "error", itemsError.message);
+  }
+
+  await auditAdminAction({
+    adminUserId: admin.userId,
+    acao: "create_groq_flyer_batch",
+    entidade: "lotes_ingestao",
+    entidadeId: batch.id,
+    depois: {
+      total_itens: extraction.offers.length,
+      provider: extraction.provider,
+      model: extraction.model,
+      arquivo: flyerFile.name,
+    },
+  });
+  revalidateAdmin(["/admin", "/admin/ingestao"]);
+  redirectWithMessage("/admin/ingestao", "success", "Panfleto processado e itens enviados para revisão.");
 }
 
 async function finishBatchIfReviewed(batchId: string, adminUserId: string) {

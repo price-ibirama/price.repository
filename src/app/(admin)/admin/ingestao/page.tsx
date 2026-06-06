@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  createFlyerIngestionBatchAction,
   createManualIngestionBatchAction,
   createSourceAction,
   publishIngestionItemAction,
@@ -59,7 +60,7 @@ export default async function AdminIngestionPage({ searchParams }: AdminIngestio
       <Card>
         <CardHeader>
           <CardTitle>Fluxo de ingestão</CardTitle>
-          <CardDescription>Cadastre fontes e crie lotes manuais sem deixar formulários espalhados na tela.</CardDescription>
+          <CardDescription>Cadastre fontes, processe panfletos com Groq e revise os itens antes de publicar.</CardDescription>
           <CardAction className="flex flex-wrap gap-2">
             <FormDialog title="Nova fonte" description="Mapeia de onde as ofertas foram coletadas." triggerLabel="Nova fonte">
               <form action={createSourceAction}>
@@ -93,6 +94,47 @@ export default async function AdminIngestionPage({ searchParams }: AdminIngestio
                   </label>
                   <Button className="w-fit" type="submit">
                     Cadastrar fonte
+                  </Button>
+                </FieldGroup>
+              </form>
+            </FormDialog>
+            <FormDialog
+              title="Processar panfleto"
+              description="Envie uma imagem JPG, PNG ou WEBP. A Groq extrai os itens e cria um lote para revisão."
+              triggerLabel="Processar panfleto"
+            >
+              <form action={createFlyerIngestionBatchAction}>
+                <FieldGroup>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="panfleto_estabelecimento">Estabelecimento</FieldLabel>
+                      <FormSelect
+                        id="panfleto_estabelecimento"
+                        name="id_estabelecimento"
+                        options={establishmentOptions}
+                        placeholder="Selecione um estabelecimento"
+                        required
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="panfleto_fonte">Fonte</FieldLabel>
+                      <FormSelect id="panfleto_fonte" name="id_fonte" options={sourceOptions} placeholder="Sem fonte" />
+                    </Field>
+                  </div>
+                  <Field>
+                    <FieldLabel htmlFor="panfleto">Panfleto digital</FieldLabel>
+                    <label
+                      htmlFor="panfleto"
+                      className="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-muted-foreground/40 bg-muted/30 px-4 py-6 text-center transition hover:bg-muted/50"
+                    >
+                      <span className="text-sm font-medium">Arraste uma imagem ou clique para selecionar</span>
+                      <span className="mt-1 text-xs text-muted-foreground">JPG, PNG ou WEBP até 3MB.</span>
+                    </label>
+                    <Input id="panfleto" name="panfleto" type="file" accept="image/png,image/jpeg,image/webp" required />
+                    <FieldDescription>O arquivo é processado em memória e os itens extraídos entram na fila de revisão.</FieldDescription>
+                  </Field>
+                  <Button className="w-fit" type="submit">
+                    Enviar e processar
                   </Button>
                 </FieldGroup>
               </form>
