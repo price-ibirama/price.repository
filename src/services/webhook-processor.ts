@@ -1,4 +1,4 @@
-import { buildOffersResponse, searchOffers } from "@/services/offers-service";
+import { buildOffersResponse, searchOffers, searchProductSuggestions } from "@/services/offers-service";
 import { parseMessageIntent } from "@/services/message-classifier";
 import { wrapBetaMessage } from "@/services/message-template";
 import { registerIntentLog, registerResponseLog } from "@/services/logging-service";
@@ -27,6 +27,12 @@ type BuildFinalResultInput = {
     searchTerm: string,
     classification: 'saudacao' | 'desconhecido' | 'busca'
 }
+
+export type WhatsappMessageClient = Pick<WhatsappClient, "markAsRead" | "sendText" | "sendTypingIndicator">;
+
+type ProcessIncomingWhatsappMessageOptions = {
+    whatsappClient?: WhatsappMessageClient;
+};
 
 function isIncomingMessageExpired(timestamp: string) {
     const receivedAt = Number(timestamp) * 1000;
@@ -60,6 +66,7 @@ async function buildFinalResult({ searchTerm, classification }: BuildFinalResult
     if (classification === 'busca') {
         try {
             const offers = await searchOffers(searchTerm);
+            const suggestions = offers.length === 0 ? await searchProductSuggestions(searchTerm) : [];
             return {
                 results: offers.map((offer) => ({
                     produto: offer.produto,
@@ -70,7 +77,7 @@ async function buildFinalResult({ searchTerm, classification }: BuildFinalResult
                     cidade: offer.cidade,
                     validade_fim: offer.validade_fim,
                 })),
-                message: wrapBetaMessage(buildOffersResponse(searchTerm, offers))
+                message: wrapBetaMessage(buildOffersResponse(searchTerm, offers, suggestions))
             }
         } catch (error) {
             console.error(error);
@@ -95,7 +102,10 @@ async function buildFinalResult({ searchTerm, classification }: BuildFinalResult
     }
 }
 
-export async function processIncomingWhatsappMessage(message: IncomingWhatsappTextMessage) {
+export async function processIncomingWhatsappMessage(
+    message: IncomingWhatsappTextMessage,
+    options: ProcessIncomingWhatsappMessageOptions = {},
+) {
     if (isIncomingMessageExpired(message.timestamp)) {
         console.info(`expired message ignored`, {
             id: message.id,
@@ -104,7 +114,7 @@ export async function processIncomingWhatsappMessage(message: IncomingWhatsappTe
         return;
     }
 
-    const whatsappClient = new WhatsappClient();
+    const whatsappClient = options.whatsappClient ?? new WhatsappClient();
 
     const rawText = message.type === "text" ? message.text?.body ?? "" : `Mensagem do tipo ${message.type}`;
     const parsedIntent = message.type === "text"

@@ -34,6 +34,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_members: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["admin_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["admin_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["admin_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      auditoria_admin: {
+        Row: {
+          acao: string
+          admin_user_id: string | null
+          antes: Json | null
+          criado_em: string
+          depois: Json | null
+          entidade: string
+          entidade_id: string | null
+          id: string
+        }
+        Insert: {
+          acao: string
+          admin_user_id?: string | null
+          antes?: Json | null
+          criado_em?: string
+          depois?: Json | null
+          entidade: string
+          entidade_id?: string | null
+          id?: string
+        }
+        Update: {
+          acao?: string
+          admin_user_id?: string | null
+          antes?: Json | null
+          criado_em?: string
+          depois?: Json | null
+          entidade?: string
+          entidade_id?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       bairros: {
         Row: {
           criado_em: string | null
@@ -156,6 +216,140 @@ export type Database = {
           },
         ]
       }
+      fontes_dados: {
+        Row: {
+          ativo: boolean
+          atualizado_em: string
+          config: Json
+          criado_em: string
+          id: string
+          id_estabelecimento: string | null
+          nome: string
+          tipo: Database["public"]["Enums"]["tipo_fonte_dados"]
+          url: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          atualizado_em?: string
+          config?: Json
+          criado_em?: string
+          id?: string
+          id_estabelecimento?: string | null
+          nome: string
+          tipo?: Database["public"]["Enums"]["tipo_fonte_dados"]
+          url?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          atualizado_em?: string
+          config?: Json
+          criado_em?: string
+          id?: string
+          id_estabelecimento?: string | null
+          nome?: string
+          tipo?: Database["public"]["Enums"]["tipo_fonte_dados"]
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fontes_dados_id_estabelecimento_fkey"
+            columns: ["id_estabelecimento"]
+            isOneToOne: false
+            referencedRelation: "estabelecimentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      itens_ingestao: {
+        Row: {
+          atualizado_em: string
+          candidatos: Json
+          categoria_sugerida: string | null
+          confidence: number | null
+          criado_em: string
+          embalagem: string | null
+          erro: string | null
+          fingerprint_origem: string | null
+          id: string
+          id_lote: string
+          id_produto: string | null
+          marca: string | null
+          nome_normalizado: string | null
+          nome_original: string
+          observacao: string | null
+          preco: number | null
+          quantidade: number | null
+          raw_payload: Json
+          status: Database["public"]["Enums"]["status_item_ingestao"]
+          unidade: string | null
+          validade_fim: string | null
+          validade_inicio: string | null
+        }
+        Insert: {
+          atualizado_em?: string
+          candidatos?: Json
+          categoria_sugerida?: string | null
+          confidence?: number | null
+          criado_em?: string
+          embalagem?: string | null
+          erro?: string | null
+          fingerprint_origem?: string | null
+          id?: string
+          id_lote: string
+          id_produto?: string | null
+          marca?: string | null
+          nome_normalizado?: string | null
+          nome_original: string
+          observacao?: string | null
+          preco?: number | null
+          quantidade?: number | null
+          raw_payload?: Json
+          status?: Database["public"]["Enums"]["status_item_ingestao"]
+          unidade?: string | null
+          validade_fim?: string | null
+          validade_inicio?: string | null
+        }
+        Update: {
+          atualizado_em?: string
+          candidatos?: Json
+          categoria_sugerida?: string | null
+          confidence?: number | null
+          criado_em?: string
+          embalagem?: string | null
+          erro?: string | null
+          fingerprint_origem?: string | null
+          id?: string
+          id_lote?: string
+          id_produto?: string | null
+          marca?: string | null
+          nome_normalizado?: string | null
+          nome_original?: string
+          observacao?: string | null
+          preco?: number | null
+          quantidade?: number | null
+          raw_payload?: Json
+          status?: Database["public"]["Enums"]["status_item_ingestao"]
+          unidade?: string | null
+          validade_fim?: string | null
+          validade_inicio?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_ingestao_id_lote_fkey"
+            columns: ["id_lote"]
+            isOneToOne: false
+            referencedRelation: "lotes_ingestao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_ingestao_id_produto_fkey"
+            columns: ["id_produto"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       log_intencoes: {
         Row: {
           classificacao: string
@@ -229,36 +423,126 @@ export type Database = {
           },
         ]
       }
+      lotes_ingestao: {
+        Row: {
+          arquivo_origem: string | null
+          atualizado_em: string
+          conteudo_original: string | null
+          criado_em: string
+          criado_por: string | null
+          id: string
+          id_estabelecimento: string | null
+          id_fonte: string | null
+          publicado_em: string | null
+          publicado_por: string | null
+          raw_payload: Json
+          revisado_por: string | null
+          status: Database["public"]["Enums"]["status_lote_ingestao"]
+          total_itens: number
+        }
+        Insert: {
+          arquivo_origem?: string | null
+          atualizado_em?: string
+          conteudo_original?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          id?: string
+          id_estabelecimento?: string | null
+          id_fonte?: string | null
+          publicado_em?: string | null
+          publicado_por?: string | null
+          raw_payload?: Json
+          revisado_por?: string | null
+          status?: Database["public"]["Enums"]["status_lote_ingestao"]
+          total_itens?: number
+        }
+        Update: {
+          arquivo_origem?: string | null
+          atualizado_em?: string
+          conteudo_original?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          id?: string
+          id_estabelecimento?: string | null
+          id_fonte?: string | null
+          publicado_em?: string | null
+          publicado_por?: string | null
+          raw_payload?: Json
+          revisado_por?: string | null
+          status?: Database["public"]["Enums"]["status_lote_ingestao"]
+          total_itens?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lotes_ingestao_id_estabelecimento_fkey"
+            columns: ["id_estabelecimento"]
+            isOneToOne: false
+            referencedRelation: "estabelecimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lotes_ingestao_id_fonte_fkey"
+            columns: ["id_fonte"]
+            isOneToOne: false
+            referencedRelation: "fontes_dados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ofertas: {
         Row: {
           atualizado_em: string | null
+          atualizado_por: string | null
           criado_em: string | null
+          criado_por: string | null
+          fingerprint_origem: string | null
           id: string
           id_estabelecimento: string
+          id_item_ingestao: string | null
+          id_lote_ingestao: string | null
           id_produto: string
           observacao: string | null
           preco: number
+          publicado_em: string | null
+          status: string
           validade_fim: string | null
+          validade_inicio: string | null
         }
         Insert: {
           atualizado_em?: string | null
+          atualizado_por?: string | null
           criado_em?: string | null
+          criado_por?: string | null
+          fingerprint_origem?: string | null
           id?: string
           id_estabelecimento: string
+          id_item_ingestao?: string | null
+          id_lote_ingestao?: string | null
           id_produto: string
           observacao?: string | null
           preco: number
+          publicado_em?: string | null
+          status?: string
           validade_fim?: string | null
+          validade_inicio?: string | null
         }
         Update: {
           atualizado_em?: string | null
+          atualizado_por?: string | null
           criado_em?: string | null
+          criado_por?: string | null
+          fingerprint_origem?: string | null
           id?: string
           id_estabelecimento?: string
+          id_item_ingestao?: string | null
+          id_lote_ingestao?: string | null
           id_produto?: string
           observacao?: string | null
           preco?: number
+          publicado_em?: string | null
+          status?: string
           validade_fim?: string | null
+          validade_inicio?: string | null
         }
         Relationships: [
           {
@@ -266,6 +550,20 @@ export type Database = {
             columns: ["id_estabelecimento"]
             isOneToOne: false
             referencedRelation: "estabelecimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ofertas_id_item_ingestao_fkey"
+            columns: ["id_item_ingestao"]
+            isOneToOne: false
+            referencedRelation: "itens_ingestao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ofertas_id_lote_ingestao_fkey"
+            columns: ["id_lote_ingestao"]
+            isOneToOne: false
+            referencedRelation: "lotes_ingestao"
             referencedColumns: ["id"]
           },
           {
@@ -344,6 +642,79 @@ export type Database = {
           },
         ]
       }
+      termos_busca: {
+        Row: {
+          aprovado_por: string | null
+          ativo: boolean
+          atualizado_em: string
+          criado_em: string
+          id: string
+          id_categoria: string | null
+          id_estabelecimento: string | null
+          id_produto: string | null
+          marca: string | null
+          origem: string
+          peso: number
+          termo: string
+          termo_search: string | null
+          tipo_alvo: Database["public"]["Enums"]["tipo_alvo_termo_busca"]
+        }
+        Insert: {
+          aprovado_por?: string | null
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          id?: string
+          id_categoria?: string | null
+          id_estabelecimento?: string | null
+          id_produto?: string | null
+          marca?: string | null
+          origem?: string
+          peso?: number
+          termo: string
+          termo_search?: string | null
+          tipo_alvo?: Database["public"]["Enums"]["tipo_alvo_termo_busca"]
+        }
+        Update: {
+          aprovado_por?: string | null
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          id?: string
+          id_categoria?: string | null
+          id_estabelecimento?: string | null
+          id_produto?: string | null
+          marca?: string | null
+          origem?: string
+          peso?: number
+          termo?: string
+          termo_search?: string | null
+          tipo_alvo?: Database["public"]["Enums"]["tipo_alvo_termo_busca"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "termos_busca_id_categoria_fkey"
+            columns: ["id_categoria"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "termos_busca_id_estabelecimento_fkey"
+            columns: ["id_estabelecimento"]
+            isOneToOne: false
+            referencedRelation: "estabelecimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "termos_busca_id_produto_fkey"
+            columns: ["id_produto"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usuarios: {
         Row: {
           id: string
@@ -385,6 +756,20 @@ export type Database = {
           validade_fim: string
         }[]
       }
+      buscar_produtos_sugeridos: {
+        Args: { p_id_cidade?: string; p_limite?: number; p_termo: string }
+        Returns: {
+          produto: string
+        }[]
+      }
+      buscar_termos_sem_resultado: {
+        Args: { p_limite?: number }
+        Returns: {
+          buscas: number
+          sem_resultado: number
+          termo: string
+        }[]
+      }
       registrar_log_intencao: {
         Args: {
           p_classificacao: string
@@ -409,7 +794,35 @@ export type Database = {
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
+      admin_role: "owner" | "admin" | "editor" | "viewer"
+      status_item_ingestao:
+        | "pendente"
+        | "aprovado"
+        | "rejeitado"
+        | "publicado"
+        | "erro"
+      status_lote_ingestao:
+        | "rascunho"
+        | "processando"
+        | "pendente_revisao"
+        | "aprovado"
+        | "publicado"
+        | "rejeitado"
+        | "erro"
+      tipo_alvo_termo_busca:
+        | "produto"
+        | "categoria"
+        | "marca"
+        | "estabelecimento"
       tipo_estabelecimento: "supermercado" | "farmacia" | "posto_combustivel"
+      tipo_fonte_dados:
+        | "site"
+        | "rede_social"
+        | "panfleto"
+        | "pdf"
+        | "imagem"
+        | "texto"
+        | "outro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -540,7 +953,39 @@ export const Constants = {
   },
   public: {
     Enums: {
+      admin_role: ["owner", "admin", "editor", "viewer"],
+      status_item_ingestao: [
+        "pendente",
+        "aprovado",
+        "rejeitado",
+        "publicado",
+        "erro",
+      ],
+      status_lote_ingestao: [
+        "rascunho",
+        "processando",
+        "pendente_revisao",
+        "aprovado",
+        "publicado",
+        "rejeitado",
+        "erro",
+      ],
+      tipo_alvo_termo_busca: [
+        "produto",
+        "categoria",
+        "marca",
+        "estabelecimento",
+      ],
       tipo_estabelecimento: ["supermercado", "farmacia", "posto_combustivel"],
+      tipo_fonte_dados: [
+        "site",
+        "rede_social",
+        "panfleto",
+        "pdf",
+        "imagem",
+        "texto",
+        "outro",
+      ],
     },
   },
 } as const
