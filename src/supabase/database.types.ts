@@ -756,6 +756,12 @@ export type Database = {
           validade_fim: string
         }[]
       }
+      buscar_produtos_sugeridos: {
+        Args: { p_id_cidade?: string; p_limite?: number; p_termo: string }
+        Returns: {
+          produto: string
+        }[]
+      }
       buscar_termos_sem_resultado: {
         Args: { p_limite?: number }
         Returns: {

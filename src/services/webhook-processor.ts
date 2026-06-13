@@ -1,4 +1,4 @@
-import { buildOffersResponse, searchOffers } from "@/services/offers-service";
+import { buildOffersResponse, searchOffers, searchProductSuggestions } from "@/services/offers-service";
 import { parseMessageIntent } from "@/services/message-classifier";
 import { wrapBetaMessage } from "@/services/message-template";
 import { registerIntentLog, registerResponseLog } from "@/services/logging-service";
@@ -66,6 +66,7 @@ async function buildFinalResult({ searchTerm, classification }: BuildFinalResult
     if (classification === 'busca') {
         try {
             const offers = await searchOffers(searchTerm);
+            const suggestions = offers.length === 0 ? await searchProductSuggestions(searchTerm) : [];
             return {
                 results: offers.map((offer) => ({
                     produto: offer.produto,
@@ -76,7 +77,7 @@ async function buildFinalResult({ searchTerm, classification }: BuildFinalResult
                     cidade: offer.cidade,
                     validade_fim: offer.validade_fim,
                 })),
-                message: wrapBetaMessage(buildOffersResponse(searchTerm, offers))
+                message: wrapBetaMessage(buildOffersResponse(searchTerm, offers, suggestions))
             }
         } catch (error) {
             console.error(error);

@@ -58,6 +58,7 @@ export type SourceSummary = {
   tipo: string;
   url: string | null;
   ativo: boolean;
+  estabelecimentoId: string | null;
   estabelecimento: string | null;
 };
 
@@ -364,7 +365,7 @@ export async function getSourceSummaries(): Promise<SourceSummary[]> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("fontes_dados")
-    .select("id, nome, tipo, url, ativo, estabelecimentos(nome)")
+    .select("id, nome, tipo, url, ativo, id_estabelecimento, estabelecimentos(nome)")
     .order("nome");
 
   if (error || !Array.isArray(data)) {
@@ -377,6 +378,7 @@ export async function getSourceSummaries(): Promise<SourceSummary[]> {
     tipo: item.tipo,
     url: item.url ?? null,
     ativo: Boolean(item.ativo),
+    estabelecimentoId: item.id_estabelecimento ?? null,
     estabelecimento: item.estabelecimentos?.nome ?? null,
   }));
 }

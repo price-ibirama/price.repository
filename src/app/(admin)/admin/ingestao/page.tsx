@@ -14,10 +14,14 @@ import {
   createFlyerIngestionBatchAction,
   createManualIngestionBatchAction,
   createSourceAction,
+  createUrlIngestionBatchAction,
+  deleteSourceAction,
   publishIngestionItemAction,
   rejectIngestionItemAction,
+  updateSourceAction,
 } from "@/lib/admin/actions";
 import { getCatalogOptions, getIngestionBatches, getIngestionItems, getSourceSummaries } from "@/lib/admin/data";
+import { SOURCE_TYPES } from "@/lib/admin/source-management";
 import { formatCurrency } from "@/utils/format-currency";
 import { formatDate } from "@/utils/format-date";
 
@@ -29,8 +33,6 @@ type AdminIngestionPageProps = {
     success?: string;
   }>;
 };
-
-const sourceTypes = ["site", "rede_social", "panfleto", "pdf", "imagem", "texto", "outro"];
 
 export default async function AdminIngestionPage({ searchParams }: AdminIngestionPageProps) {
   const [params, options, batches, items, sources] = await Promise.all([
@@ -46,7 +48,7 @@ export default async function AdminIngestionPage({ searchParams }: AdminIngestio
     label: establishment.label,
   }));
   const sourceOptions = options.fontes.map((source) => ({ value: source.id, label: source.label }));
-  const sourceTypeOptions = sourceTypes.map((type) => ({ value: type, label: type }));
+  const sourceTypeOptions = SOURCE_TYPES.map((type) => ({ value: type, label: type }));
   const productOptions = options.produtos.map((product) => ({ value: product.id, label: product.label }));
   const reviewProductOptions = [{ value: "__create__", label: "Criar produto novo" }, ...productOptions];
 
@@ -99,6 +101,54 @@ export default async function AdminIngestionPage({ searchParams }: AdminIngestio
               </form>
             </FormDialog>
             <FormDialog
+              title="Processar URL"
+              description="Busca a URL cadastrada na fonte e cria um lote com as ofertas extraídas."
+              triggerLabel="Processar URL"
+            >
+              <form action={createUrlIngestionBatchAction}>
+                <FieldGroup>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="url_fonte">Fonte</FieldLabel>
+                      <FormSelect
+                        id="url_fonte"
+                        name="id_fonte"
+                        options={sourceOptions}
+                        placeholder="Selecione uma fonte com URL"
+                        required
+                      />
+                      <FieldDescription>A fonte precisa estar ativa e possuir uma URL pública cadastrada.</FieldDescription>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="url_estabelecimento">Estabelecimento</FieldLabel>
+                      <FormSelect
+                        id="url_estabelecimento"
+                        name="id_estabelecimento"
+                        options={establishmentOptions}
+                        placeholder="Usar vínculo da fonte"
+                      />
+                      <FieldDescription>Obrigatório apenas se a fonte não estiver vinculada a uma loja.</FieldDescription>
+                    </Field>
+                  </div>
+                  <Field>
+                    <label className="flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm">
+                      <input name="sem_revisao" type="checkbox" className="mt-0.5 size-4 rounded border-input" />
+                      <span className="flex flex-col gap-1">
+                        <span className="font-medium">Criar ofertas sem revisão</span>
+                        <span className="text-xs text-muted-foreground">
+                          Marcado: produtos e sinônimos são resolvidos e as ofertas válidas são publicadas automaticamente. Desmarcado:
+                          os itens ficam na fila para revisão antes da publicação.
+                        </span>
+                      </span>
+                    </label>
+                  </Field>
+                  <Button className="w-fit" type="submit">
+                    Buscar e processar
+                  </Button>
+                </FieldGroup>
+              </form>
+            </FormDialog>
+            <FormDialog
               title="Processar panfleto"
               description="Envie uma imagem JPG, PNG ou WEBP. A Groq extrai os itens e cria um lote para revisão."
               triggerLabel="Processar panfleto"
@@ -132,6 +182,18 @@ export default async function AdminIngestionPage({ searchParams }: AdminIngestio
                     </label>
                     <Input id="panfleto" name="panfleto" type="file" accept="image/png,image/jpeg,image/webp" required />
                     <FieldDescription>O arquivo é processado em memória e os itens extraídos entram na fila de revisão.</FieldDescription>
+                  </Field>
+                  <Field>
+                    <label className="flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm">
+                      <input name="sem_revisao" type="checkbox" className="mt-0.5 size-4 rounded border-input" />
+                      <span className="flex flex-col gap-1">
+                        <span className="font-medium">Criar ofertas sem revisão</span>
+                        <span className="text-xs text-muted-foreground">
+                          Marcado: produtos e sinônimos são resolvidos e as ofertas válidas são publicadas automaticamente. Desmarcado:
+                          os itens ficam na fila para revisão antes da publicação.
+                        </span>
+                      </span>
+                    </label>
                   </Field>
                   <Button className="w-fit" type="submit">
                     Enviar e processar
@@ -335,6 +397,7 @@ export default async function AdminIngestionPage({ searchParams }: AdminIngestio
                     <TableHead>Tipo</TableHead>
                     <TableHead>Estabelecimento</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -345,6 +408,74 @@ export default async function AdminIngestionPage({ searchParams }: AdminIngestio
                       <TableCell>{source.estabelecimento ?? "Sem vínculo"}</TableCell>
                       <TableCell>
                         <StatusBadge status={source.ativo ? "ativa" : "inativa"} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-2">
+                          <FormDialog title="Editar fonte" description="Atualize os dados usados na ingestão." triggerLabel="Editar">
+                            <form action={updateSourceAction}>
+                              <FieldGroup>
+                                <input name="source_id" type="hidden" value={source.id} />
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <Field>
+                                    <FieldLabel htmlFor={`source_name_${source.id}`}>Nome</FieldLabel>
+                                    <Input id={`source_name_${source.id}`} name="nome" defaultValue={source.nome} required />
+                                  </Field>
+                                  <Field>
+                                    <FieldLabel htmlFor={`source_type_${source.id}`}>Tipo</FieldLabel>
+                                    <FormSelect
+                                      id={`source_type_${source.id}`}
+                                      name="tipo"
+                                      options={sourceTypeOptions}
+                                      placeholder="Selecione um tipo"
+                                      defaultValue={source.tipo}
+                                    />
+                                  </Field>
+                                  <Field>
+                                    <FieldLabel htmlFor={`source_establishment_${source.id}`}>Estabelecimento</FieldLabel>
+                                    <FormSelect
+                                      id={`source_establishment_${source.id}`}
+                                      name="id_estabelecimento"
+                                      options={establishmentOptions}
+                                      placeholder="Sem vínculo"
+                                      defaultValue={source.estabelecimentoId}
+                                    />
+                                  </Field>
+                                  <Field>
+                                    <FieldLabel htmlFor={`source_url_${source.id}`}>URL</FieldLabel>
+                                    <Input id={`source_url_${source.id}`} name="url" defaultValue={source.url ?? ""} placeholder="https://..." />
+                                  </Field>
+                                </div>
+                                <label className="flex items-center gap-2 text-sm">
+                                  <input name="ativo" type="checkbox" defaultChecked={source.ativo} />
+                                  Fonte ativa
+                                </label>
+                                <Button className="w-fit" type="submit">
+                                  Salvar alterações
+                                </Button>
+                              </FieldGroup>
+                            </form>
+                          </FormDialog>
+                          <FormDialog
+                            title="Remover fonte"
+                            description="Remove a fonte e mantém os lotes anteriores sem vínculo com ela."
+                            triggerLabel="Remover"
+                          >
+                            <form action={deleteSourceAction}>
+                              <FieldGroup>
+                                <input name="source_id" type="hidden" value={source.id} />
+                                <Field>
+                                  <FieldLabel>Fonte</FieldLabel>
+                                  <FieldDescription>
+                                    Confirme a remoção de {source.nome}. Esta ação não remove ofertas ou lotes já criados.
+                                  </FieldDescription>
+                                </Field>
+                                <Button className="w-fit" type="submit" variant="destructive">
+                                  Remover fonte
+                                </Button>
+                              </FieldGroup>
+                            </form>
+                          </FormDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

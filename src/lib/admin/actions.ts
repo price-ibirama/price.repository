@@ -2,9 +2,17 @@
 
 import { createHash } from "node:crypto";
 
+import { resolveCatalogForIngestionItem } from "@/lib/admin/catalog-resolution";
 import { evaluateOfferQuality, hasBlockingOfferIssue } from "@/lib/admin/offer-quality";
 import { extractFlyerOffersWithGroq, FlyerExtractionError } from "@/lib/admin/flyer-extraction";
 import { parseManualIngestionText, normalizeProductName } from "@/lib/admin/ingestion-parser";
+import { buildSourcePayload, SOURCE_TYPES } from "@/lib/admin/source-management";
+import {
+  extractUrlOffersWithGroq,
+  fetchSourceUrlText,
+  resolveUrlIngestionContext,
+  UrlIngestionError,
+} from "@/lib/admin/url-extraction";
 import { type AdminRole, requireAdmin } from "@/lib/admin/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { rankProductCandidates, type ExtractedOfferProduct, type ProductCandidate } from "@/services/product-matching";
@@ -450,9 +458,13 @@ export async function updateOfferStatusAction(formData: FormData) {
 const sourceSchema = z4.object({
   nome: requiredText,
   id_estabelecimento: optionalUuid,
-  tipo: z4.enum(["site", "rede_social", "panfleto", "pdf", "imagem", "texto", "outro"]),
+  tipo: z4.enum(SOURCE_TYPES),
   url: optionalText,
   ativo: z4.boolean(),
+});
+
+const sourceIdSchema = z4.object({
+  source_id: z4.string().uuid(),
 });
 
 export async function createSourceAction(formData: FormData) {
@@ -469,7 +481,7 @@ export async function createSourceAction(formData: FormData) {
   );
   const supabase = createServiceClient();
   const payload = {
-    ...parsed,
+    ...buildSourcePayload(parsed),
     config: { origem: "admin" },
   };
   const { data, error } = await supabase.from("fontes_dados").insert(payload).select("id").single();
@@ -487,6 +499,90 @@ export async function createSourceAction(formData: FormData) {
   });
   revalidateAdmin(["/admin/ingestao"]);
   redirectWithMessage("/admin/ingestao", "success", "Fonte cadastrada.");
+}
+
+export async function updateSourceAction(formData: FormData) {
+  const admin = await requireRole(writeRoles, "/admin/ingestao");
+  const parsedId = parseResult(
+    sourceIdSchema.safeParse({
+      source_id: formData.get("source_id"),
+    }),
+    "/admin/ingestao",
+  );
+  const parsed = parseResult(
+    sourceSchema.safeParse({
+      nome: formData.get("nome"),
+      id_estabelecimento: formData.get("id_estabelecimento"),
+      tipo: formData.get("tipo") || "texto",
+      url: formData.get("url"),
+      ativo: formData.get("ativo") === "on",
+    }),
+    "/admin/ingestao",
+  );
+  const supabase = createServiceClient();
+  const { data: previousSource, error: previousSourceError } = await supabase
+    .from("fontes_dados")
+    .select("id, nome, tipo, url, ativo, id_estabelecimento")
+    .eq("id", parsedId.source_id)
+    .single();
+
+  if (previousSourceError || !previousSource) {
+    redirectWithMessage("/admin/ingestao", "error", "Fonte não encontrada.");
+  }
+
+  const payload = buildSourcePayload(parsed);
+  const { error } = await supabase.from("fontes_dados").update(payload).eq("id", parsedId.source_id);
+
+  if (error) {
+    redirectWithMessage("/admin/ingestao", "error", error.message);
+  }
+
+  await auditAdminAction({
+    adminUserId: admin.userId,
+    acao: "update",
+    entidade: "fontes_dados",
+    entidadeId: parsedId.source_id,
+    antes: previousSource,
+    depois: payload,
+  });
+  revalidateAdmin(["/admin/ingestao"]);
+  redirectWithMessage("/admin/ingestao", "success", "Fonte atualizada.");
+}
+
+export async function deleteSourceAction(formData: FormData) {
+  const admin = await requireRole(writeRoles, "/admin/ingestao");
+  const parsed = parseResult(
+    sourceIdSchema.safeParse({
+      source_id: formData.get("source_id"),
+    }),
+    "/admin/ingestao",
+  );
+  const supabase = createServiceClient();
+  const { data: previousSource, error: previousSourceError } = await supabase
+    .from("fontes_dados")
+    .select("id, nome, tipo, url, ativo, id_estabelecimento")
+    .eq("id", parsed.source_id)
+    .single();
+
+  if (previousSourceError || !previousSource) {
+    redirectWithMessage("/admin/ingestao", "error", "Fonte não encontrada.");
+  }
+
+  const { error } = await supabase.from("fontes_dados").delete().eq("id", parsed.source_id);
+
+  if (error) {
+    redirectWithMessage("/admin/ingestao", "error", error.message);
+  }
+
+  await auditAdminAction({
+    adminUserId: admin.userId,
+    acao: "delete",
+    entidade: "fontes_dados",
+    entidadeId: parsed.source_id,
+    antes: previousSource,
+  });
+  revalidateAdmin(["/admin/ingestao"]);
+  redirectWithMessage("/admin/ingestao", "success", "Fonte removida.");
 }
 
 async function getProductCandidates() {
@@ -518,6 +614,13 @@ const ingestionBatchSchema = z4.object({
 const flyerIngestionBatchSchema = z4.object({
   id_estabelecimento: z4.string().uuid(),
   id_fonte: optionalUuid,
+  sem_revisao: z4.boolean(),
+});
+
+const urlIngestionBatchSchema = z4.object({
+  id_fonte: z4.string().uuid(),
+  id_estabelecimento: optionalUuid,
+  sem_revisao: z4.boolean(),
 });
 
 export async function createManualIngestionBatchAction(formData: FormData) {
@@ -609,12 +712,226 @@ export async function createManualIngestionBatchAction(formData: FormData) {
   redirectWithMessage("/admin/ingestao", "success", "Lote criado e itens enviados para revisão.");
 }
 
+export async function createUrlIngestionBatchAction(formData: FormData) {
+  const admin = await requireRole(writeRoles, "/admin/ingestao");
+  const parsed = parseResult(
+    urlIngestionBatchSchema.safeParse({
+      id_fonte: formData.get("id_fonte"),
+      id_estabelecimento: formData.get("id_estabelecimento"),
+      sem_revisao: formData.get("sem_revisao") === "on",
+    }),
+    "/admin/ingestao",
+  );
+  const supabase = createServiceClient();
+  const { data: source, error: sourceError } = await supabase
+    .from("fontes_dados")
+    .select("id, nome, url, ativo, id_estabelecimento")
+    .eq("id", parsed.id_fonte)
+    .single();
+
+  if (sourceError || !source) {
+    redirectWithMessage("/admin/ingestao", "error", "Fonte não encontrada.");
+  }
+
+  let urlContext;
+
+  try {
+    urlContext = resolveUrlIngestionContext({
+      source: {
+        id: source.id,
+        nome: source.nome,
+        url: source.url,
+        ativo: Boolean(source.ativo),
+        id_estabelecimento: source.id_estabelecimento ?? null,
+      },
+      fallbackEstablishmentId: parsed.id_estabelecimento,
+    });
+  } catch (error) {
+    const message = error instanceof UrlIngestionError ? error.message : "Não foi possível validar a fonte selecionada.";
+    redirectWithMessage("/admin/ingestao", "error", message);
+  }
+
+  let fetchedSource;
+
+  try {
+    fetchedSource = await fetchSourceUrlText(urlContext.url);
+  } catch (error) {
+    const message = error instanceof UrlIngestionError ? error.message : "Não foi possível buscar a URL da fonte.";
+    redirectWithMessage("/admin/ingestao", "error", message);
+  }
+
+  const { data: establishment } = await supabase
+    .from("estabelecimentos")
+    .select("nome")
+    .eq("id", urlContext.establishmentId)
+    .single();
+  let extraction;
+
+  try {
+    extraction = await extractUrlOffersWithGroq({
+      url: fetchedSource.url,
+      text: fetchedSource.text,
+      establishmentName: establishment?.nome ?? null,
+      sourceName: urlContext.sourceName,
+    });
+  } catch (error) {
+    const message = error instanceof UrlIngestionError ? error.message : "Não foi possível processar a URL com a Groq.";
+    redirectWithMessage("/admin/ingestao", "error", message);
+  }
+
+  const { data: batch, error: batchError } = await supabase
+    .from("lotes_ingestao")
+    .insert({
+      id_estabelecimento: urlContext.establishmentId,
+      id_fonte: urlContext.sourceId,
+      status: "pendente_revisao",
+      arquivo_origem: urlContext.url,
+      conteudo_original: fetchedSource.text,
+      total_itens: extraction.offers.length,
+      criado_por: admin.userId,
+      raw_payload: {
+        origem: "groq_url",
+        url: urlContext.url,
+        content_type: fetchedSource.contentType,
+        original_text_length: fetchedSource.originalTextLength,
+        text_truncated: fetchedSource.originalTextLength > fetchedSource.text.length,
+        provider: extraction.provider,
+        model: extraction.model,
+        usage: extraction.usage,
+        warnings: extraction.warnings,
+        sem_revisao: parsed.sem_revisao,
+      },
+    })
+    .select("id")
+    .single();
+
+  if (batchError || !batch) {
+    redirectWithMessage("/admin/ingestao", "error", batchError?.message ?? "Não foi possível criar o lote da URL.");
+  }
+
+  const candidates = await getProductCandidates();
+  const items = [];
+
+  for (const [index, item] of extraction.offers.entries()) {
+    const catalogResolution = await resolveCatalogForIngestionItem({
+      supabase,
+      item,
+      candidates,
+    });
+
+    if (catalogResolution.productCandidate && !candidates.some((candidate) => candidate.id === catalogResolution.productCandidate?.id)) {
+      candidates.push(catalogResolution.productCandidate);
+    }
+
+    items.push({
+      id_lote: batch.id,
+      id_produto: catalogResolution.productId,
+      nome_original: item.nomeOriginal,
+      nome_normalizado: normalizeProductName(item.nomeOriginal),
+      marca: item.marca,
+      quantidade: item.quantidade,
+      unidade: item.unidade,
+      embalagem: item.embalagem,
+      categoria_sugerida: item.categoriaSugerida,
+      preco: item.preco,
+      validade_inicio: item.validadeInicio,
+      validade_fim: item.validadeFim,
+      observacao: item.observacao,
+      status: "pendente",
+      confidence: catalogResolution.rankedCandidates[0]?.confidence ?? item.confidence,
+      candidatos: catalogResolution.rankedCandidates,
+      raw_payload: {
+        linha: index + 1,
+        origem: "groq_url",
+        extraction_confidence: item.confidence,
+        extracted_offer: item,
+        catalog_resolution: {
+          mode: catalogResolution.mode,
+          product_id: catalogResolution.productId,
+          product_name: catalogResolution.productName,
+          product_unit: catalogResolution.productUnit,
+          aliases_created: catalogResolution.aliasesCreated,
+          aliases_ignored: catalogResolution.aliasesIgnored,
+          alias_conflicts: catalogResolution.aliasConflicts,
+          error: catalogResolution.error,
+        },
+      },
+      fingerprint_origem: `url:${hashFingerprint([
+        urlContext.establishmentId,
+        urlContext.sourceId,
+        urlContext.url,
+        item.nomeOriginal,
+        item.preco,
+        item.validadeFim,
+      ])}`,
+    });
+  }
+
+  const insertedItemsQuery = supabase.from("itens_ingestao").insert(items);
+  const { data: insertedItems, error: itemsError } = parsed.sem_revisao
+    ? await insertedItemsQuery.select("id, id_lote, id_produto, preco, validade_inicio, validade_fim, observacao, fingerprint_origem")
+    : await insertedItemsQuery;
+
+  if (itemsError) {
+    await supabase.from("lotes_ingestao").update({ status: "erro" }).eq("id", batch.id);
+    redirectWithMessage("/admin/ingestao", "error", itemsError.message);
+  }
+
+  const autoPublishResult =
+    parsed.sem_revisao && Array.isArray(insertedItems)
+      ? await publishFlyerItemsAutomatically({
+          supabase,
+          items: insertedItems,
+          establishmentId: urlContext.establishmentId,
+          adminUserId: admin.userId,
+        })
+      : null;
+
+  if (autoPublishResult && autoPublishResult.pending === 0) {
+    await supabase
+      .from("lotes_ingestao")
+      .update({
+        status: "publicado",
+        publicado_em: new Date().toISOString(),
+        publicado_por: admin.userId,
+      })
+      .eq("id", batch.id);
+  }
+
+  await auditAdminAction({
+    adminUserId: admin.userId,
+    acao: "create_groq_url_batch",
+    entidade: "lotes_ingestao",
+    entidadeId: batch.id,
+    depois: {
+      total_itens: extraction.offers.length,
+      provider: extraction.provider,
+      model: extraction.model,
+      url: urlContext.url,
+      sem_revisao: parsed.sem_revisao,
+      auto_publish: autoPublishResult,
+    },
+  });
+  revalidateAdmin(["/admin", "/admin/ingestao"]);
+
+  if (autoPublishResult) {
+    const message =
+      autoPublishResult.pending === 0
+        ? `URL processada e ${autoPublishResult.published} ofertas publicadas automaticamente.`
+        : `URL processada: ${autoPublishResult.published} ofertas publicadas e ${autoPublishResult.pending} itens ficaram para revisão.`;
+    redirectWithMessage("/admin/ingestao", "success", message);
+  }
+
+  redirectWithMessage("/admin/ingestao", "success", "URL processada e itens enviados para revisão.");
+}
+
 export async function createFlyerIngestionBatchAction(formData: FormData) {
   const admin = await requireRole(writeRoles, "/admin/ingestao");
   const parsed = parseResult(
     flyerIngestionBatchSchema.safeParse({
       id_estabelecimento: formData.get("id_estabelecimento"),
       id_fonte: formData.get("id_fonte"),
+      sem_revisao: formData.get("sem_revisao") === "on",
     }),
     "/admin/ingestao",
   );
@@ -668,6 +985,7 @@ export async function createFlyerIngestionBatchAction(formData: FormData) {
         model: extraction.model,
         usage: extraction.usage,
         warnings: extraction.warnings,
+        sem_revisao: parsed.sem_revisao,
       },
     })
     .select("id")
@@ -678,21 +996,22 @@ export async function createFlyerIngestionBatchAction(formData: FormData) {
   }
 
   const candidates = await getProductCandidates();
-  const items = extraction.offers.map((item, index) => {
-    const input: ExtractedOfferProduct = {
-      nomeOriginal: item.nomeOriginal,
-      marca: item.marca,
-      quantidade: item.quantidade,
-      unidade: item.unidade,
-      embalagem: item.embalagem,
-      categoria: item.categoriaSugerida,
-    };
-    const ranked = rankProductCandidates(input, candidates).slice(0, 5);
-    const best = ranked[0];
+  const items = [];
 
-    return {
+  for (const [index, item] of extraction.offers.entries()) {
+    const catalogResolution = await resolveCatalogForIngestionItem({
+      supabase,
+      item,
+      candidates,
+    });
+
+    if (catalogResolution.productCandidate && !candidates.some((candidate) => candidate.id === catalogResolution.productCandidate?.id)) {
+      candidates.push(catalogResolution.productCandidate);
+    }
+
+    items.push({
       id_lote: batch.id,
-      id_produto: best && best.confidence >= 0.62 ? best.candidate.id : null,
+      id_produto: catalogResolution.productId,
       nome_original: item.nomeOriginal,
       nome_normalizado: normalizeProductName(item.nomeOriginal),
       marca: item.marca,
@@ -705,18 +1024,23 @@ export async function createFlyerIngestionBatchAction(formData: FormData) {
       validade_fim: item.validadeFim,
       observacao: item.observacao,
       status: "pendente",
-      confidence: best?.confidence ?? item.confidence,
-      candidatos: ranked.map((candidate) => ({
-        id: candidate.candidate.id,
-        nome: candidate.candidate.nome,
-        confidence: candidate.confidence,
-        reasons: candidate.reasons,
-      })),
+      confidence: catalogResolution.rankedCandidates[0]?.confidence ?? item.confidence,
+      candidatos: catalogResolution.rankedCandidates,
       raw_payload: {
         linha: index + 1,
         origem: "groq_panfleto",
         extraction_confidence: item.confidence,
         extracted_offer: item,
+        catalog_resolution: {
+          mode: catalogResolution.mode,
+          product_id: catalogResolution.productId,
+          product_name: catalogResolution.productName,
+          product_unit: catalogResolution.productUnit,
+          aliases_created: catalogResolution.aliasesCreated,
+          aliases_ignored: catalogResolution.aliasesIgnored,
+          alias_conflicts: catalogResolution.aliasConflicts,
+          error: catalogResolution.error,
+        },
       },
       fingerprint_origem: `groq:${hashFingerprint([
         parsed.id_estabelecimento,
@@ -726,13 +1050,37 @@ export async function createFlyerIngestionBatchAction(formData: FormData) {
         item.preco,
         item.validadeFim,
       ])}`,
-    };
-  });
-  const { error: itemsError } = await supabase.from("itens_ingestao").insert(items);
+    });
+  }
+  const insertedItemsQuery = supabase.from("itens_ingestao").insert(items);
+  const { data: insertedItems, error: itemsError } = parsed.sem_revisao
+    ? await insertedItemsQuery.select("id, id_lote, id_produto, preco, validade_inicio, validade_fim, observacao, fingerprint_origem")
+    : await insertedItemsQuery;
 
   if (itemsError) {
     await supabase.from("lotes_ingestao").update({ status: "erro" }).eq("id", batch.id);
     redirectWithMessage("/admin/ingestao", "error", itemsError.message);
+  }
+
+  const autoPublishResult =
+    parsed.sem_revisao && Array.isArray(insertedItems)
+      ? await publishFlyerItemsAutomatically({
+          supabase,
+          items: insertedItems,
+          establishmentId: parsed.id_estabelecimento,
+          adminUserId: admin.userId,
+        })
+      : null;
+
+  if (autoPublishResult && autoPublishResult.pending === 0) {
+    await supabase
+      .from("lotes_ingestao")
+      .update({
+        status: "publicado",
+        publicado_em: new Date().toISOString(),
+        publicado_por: admin.userId,
+      })
+      .eq("id", batch.id);
   }
 
   await auditAdminAction({
@@ -745,10 +1093,114 @@ export async function createFlyerIngestionBatchAction(formData: FormData) {
       provider: extraction.provider,
       model: extraction.model,
       arquivo: flyerFile.name,
+      sem_revisao: parsed.sem_revisao,
+      auto_publish: autoPublishResult,
     },
   });
   revalidateAdmin(["/admin", "/admin/ingestao"]);
+  if (autoPublishResult) {
+    const message =
+      autoPublishResult.pending === 0
+        ? `Panfleto processado e ${autoPublishResult.published} ofertas publicadas automaticamente.`
+        : `Panfleto processado: ${autoPublishResult.published} ofertas publicadas e ${autoPublishResult.pending} itens ficaram para revisão.`;
+    redirectWithMessage("/admin/ingestao", "success", message);
+  }
   redirectWithMessage("/admin/ingestao", "success", "Panfleto processado e itens enviados para revisão.");
+}
+
+type FlyerItemForAutoPublish = {
+  id: string;
+  id_lote: string;
+  id_produto: string | null;
+  preco: number | string | null;
+  validade_inicio: string | null;
+  validade_fim: string | null;
+  observacao: string | null;
+  fingerprint_origem: string | null;
+};
+
+async function publishFlyerItemsAutomatically(input: {
+  supabase: ReturnType<typeof createServiceClient>;
+  items: FlyerItemForAutoPublish[];
+  establishmentId: string;
+  adminUserId: string;
+}) {
+  let published = 0;
+  let pending = 0;
+  const errors: Array<{ item_id: string; reason: string }> = [];
+
+  for (const item of input.items) {
+    const price = Number(item.preco);
+
+    if (!item.id_produto || !Number.isFinite(price) || price <= 0) {
+      pending += 1;
+      errors.push({
+        item_id: item.id,
+        reason: !item.id_produto ? "Produto não vinculado." : "Preço inválido.",
+      });
+      continue;
+    }
+
+    const fingerprint = item.fingerprint_origem ?? `groq:auto:${hashFingerprint([item.id, item.id_produto, price])}`;
+    const offerPayload = {
+      id_estabelecimento: input.establishmentId,
+      id_produto: item.id_produto,
+      preco: price,
+      validade_inicio: item.validade_inicio,
+      validade_fim: item.validade_fim,
+      observacao: item.observacao,
+      status: "publicada",
+      id_lote_ingestao: item.id_lote,
+      id_item_ingestao: item.id,
+      fingerprint_origem: fingerprint,
+      criado_por: input.adminUserId,
+      atualizado_por: input.adminUserId,
+      publicado_em: new Date().toISOString(),
+    };
+    const { data: existingOffer } = await input.supabase.from("ofertas").select("id").eq("fingerprint_origem", fingerprint).maybeSingle();
+    const offerResult = existingOffer
+      ? await input.supabase.from("ofertas").update(offerPayload).eq("id", existingOffer.id).select("id").single()
+      : await input.supabase.from("ofertas").insert(offerPayload).select("id").single();
+
+    if (offerResult.error || !offerResult.data) {
+      pending += 1;
+      errors.push({
+        item_id: item.id,
+        reason: offerResult.error?.message ?? "Não foi possível publicar a oferta.",
+      });
+      await input.supabase
+        .from("itens_ingestao")
+        .update({
+          erro: offerResult.error?.message ?? "Não foi possível publicar automaticamente.",
+          atualizado_em: new Date().toISOString(),
+        })
+        .eq("id", item.id);
+      continue;
+    }
+
+    const { error: itemUpdateError } = await input.supabase
+      .from("itens_ingestao")
+      .update({
+        id_produto: item.id_produto,
+        status: "publicado",
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq("id", item.id);
+
+    if (itemUpdateError) {
+      pending += 1;
+      errors.push({ item_id: item.id, reason: itemUpdateError.message });
+      continue;
+    }
+
+    published += 1;
+  }
+
+  return {
+    published,
+    pending,
+    errors,
+  };
 }
 
 async function finishBatchIfReviewed(batchId: string, adminUserId: string) {
