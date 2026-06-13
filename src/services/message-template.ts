@@ -2,10 +2,10 @@ export function wrapBetaMessage(...content: string[]) {
     const year = new Date().getFullYear();
 
     return [
-        "_[Ferramenta em fase BETA]_",
+        "_[💚💛Ferramenta em fase BETA💚💛]_",
         "",
         ...content,
         "",
-        `_${"~ Price, " + year}_`,
+        `_${"~ Price, " + year} - Vai Brasil⚽_`,
     ].join("\n");
 }
